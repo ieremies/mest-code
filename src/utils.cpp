@@ -1,31 +1,18 @@
 #include "../incl/utils.hpp"
 #include <cassert>
 
-void Utils::printSolution(const Graph &g, const GRBModel &model,
-                          const std::vector<NodeSet> indep_sets) {
-    for (int i = 0; i < model.get(GRB_IntAttr_NumVars); i++) {
-        if (model.getVar(i).get(GRB_DoubleAttr_X) > 0.5) {
-            std::cout << "Set " << i << " selected" << std::endl;
-            for (auto n : indep_sets[i]) {
-                std::cout << g.id(n) << " ";
-            }
-            std::cout << std::endl;
+void Utils::printSolution(const Graph &g,
+                          const std::vector<NodeSet> &indep_sets,
+                          const Graph::NodeMap<double> &weight) {
+    for (auto &set : indep_sets) {
+        double sum = 0;
+        for (auto &node : set) {
+            std::cout << g.id(node) + 1 << " ";
+            sum += weight[node];
         }
+        std::cout << " -> " << sum << std::endl;
     }
 }
-
-/* check if a coloring is valid
- * i.e. no two adjacent nodes have the same color
- * returns true if the coloring is valid, false otherwise
- * BUG does not compile becouse of assert
- */
-// void assertColoring(const Graph &g, const Graph::NodeMap<Color> s) {
-//     for (lemon::ListGraph::EdgeIt e(g); e != lemon::INVALID; ++e) {
-//         lemon::ListGraph::Node u = g.u(e);
-//         lemon::ListGraph::Node v = g.v(e);
-//         assert(s[u] != s[v]);
-//     }
-// }
 
 /* Function to print a graph */
 void Utils::printGraph(const lemon::ListGraph &g) {
@@ -52,4 +39,18 @@ void Utils::printNodeSet(const NodeSet &s, const Graph &g) {
         std::cout << g.id(n) << " ";
     }
     std::cout << std::endl;
+}
+//
+bool checkInteger(Graph::NodeMap<double> &weights,
+                  std::vector<NodeSet> &indep_sets) {
+    for (auto &set : indep_sets) {
+        double sum = 0;
+        for (auto &node : set) {
+            sum += weights[node];
+        }
+        if (sum < 1 - EPS or sum > EPS) {
+            return false;
+        }
+    }
+    return true;
 }

@@ -1,38 +1,43 @@
 #include "../incl/utils.hpp"
-#include <queue>
+#include <stack>
 #include <vector>
 
-// Struct to represent a node in the branch tree
-typedef struct BranchNode {
-    // The underlying graph
+class BranchNode {
+  public:
     Graph g;
+    std::vector<NodeSet> indep_sets;
 
-    // The smallest known coloring
-    int xi;                          // == len(indep_sets)
-    std::vector<NodeSet> indep_sets; // only those being used
-
-} BranchNode;
+    BranchNode(const Graph &, const std::vector<NodeSet> &);
+    ~BranchNode();
+};
 
 class Branch {
   private:
-    // algguma forma de guardar a árvore de branching
-    std::queue<BranchNode> tree;
+    std::stack<BranchNode *> tree;
 
   public:
-    Branch();
+    /*
+    ** Create the branching tree with the initial graph and independent
+    ** set.
+    */
+    Branch(const Graph &, const std::vector<NodeSet> &);
+
+    /*
+    ** Deletes the tree and all the remaining BranchNodes.
+    */
     ~Branch();
 
     /*
-    ** Run the branching strategy.
-    ** Receives the model and uses the branching strategy to branch.
-    ** Returns the number of nodes branched.
+    ** Receives the graph, the independent sets and each of those x_s values.
+    ** Each x_s means if the independent set is in the solution or not.
+    **
+    ** Returns the number of branchs created (none if the solution is integer).
     */
-    int branch(Graph &, Graph::NodeMap<double> &);
+    int branch(const Graph &, const std::vector<NodeSet> &,
+               const std::vector<double> &x_s);
 
     /*
-     ** Based on the state of the tree, returns the next node to be optimized.
-     ** Receives the upper and lower bound known so far, in order to prune any
-     ** unfruitful branch.
-     */
-    void next(double upper_bound, double lower_bound);
+    ** Populates the graph and the independent sets with the next branch.
+    */
+    void next(Graph &, std::vector<NodeSet> &);
 };

@@ -4,12 +4,13 @@
 #include "../incl/utils.hpp"
 #include <fstream>
 #include <iostream>
-#include <lemon/list_graph.h>
 #include <string>
 #include <vector>
 
-#define EPS 0.0000000001
-
+/*
+** Function to read a DIMACS instanc from file (filename) and
+** create the Graph g.
+*/
 void readDimacsInstance(std::string filename, Graph &g) {
     std::ifstream infile(filename);
     std::string line;
@@ -34,21 +35,11 @@ void readDimacsInstance(std::string filename, Graph &g) {
         g.addEdge(nodes[u - 1], nodes[v - 1]);
     }
 }
-//
-bool checkInteger(Graph::NodeMap<double> &weights,
-                  std::vector<NodeSet> &indep_sets) {
-    for (auto &set : indep_sets) {
-        double sum = 0;
-        for (auto &node : set) {
-            sum += weights[node];
-        }
-        if (sum < 1 - EPS or sum > EPS) {
-            return false;
-        }
-    }
-    return true;
-}
 
+/*
+** Defines the initial independent sets of g and place them in
+** vector<NodeSet> indep_sets.
+*/
 void initialSets(Graph &g, std::vector<NodeSet> &indep_sets) {
     // Trivial independent sets
     for (Graph::NodeIt n(g); n != lemon::INVALID; ++n) {
@@ -58,30 +49,37 @@ void initialSets(Graph &g, std::vector<NodeSet> &indep_sets) {
     }
 }
 
+/*
+** Defines the initial upper bound.
+*/
+int primal_heuristic(const Graph &g) { return 10000000; }
+
 int main(int, char **argv) {
     Graph g;
     readDimacsInstance(argv[1], g);
 
+    int upper_bound = primal_heuristic(g);
+
     std::vector<NodeSet> indep_sets;
     initialSets(g, indep_sets);
 
-    // Branch tree;
-    // tree.addNode(g, indep_sets);
+    double sol = 0; // place holder
 
-    // while (true) {
-    //     // BUG o correto não seria "pega o próximo a dar branch?"
-    //     g, indep_sets = Branch::next();
+    // Create the branching tree with the initial node
+    Branch tree(g, indep_sets);
     while (true) {
-        Graph::NodeMap<double> weight(g);
-        Solver::solve(g, indep_sets, weight);
-        // Trocar pra o pricing add constrain
-        if (Pricing::solve(g, weight, indep_sets) == 0)
+        tree.next(g, indep_sets);
+        indep_sets.clear();
+        initialSets(g, indep_sets);
+
+        std::vector<double> x_s(0, 0);
+        Solver solver = Solver();
+        sol = solver.solve(g, indep_sets, x_s); // BUG esse sol é obj da dual
+        std::cout << "sol: " << sol << std::endl;
+
+        if (tree.branch(g, indep_sets, x_s) == 0)
             break;
-        // cleanIndepSets(g, weight, indep_sets);
     }
-    //     // espero que Branch::branch retorne a quantidade de nós gerados
-    //     if (Branch::branch(g, weight, indep_sets) == 0)
-    //         break;
-    // }
+
     return 0;
 }

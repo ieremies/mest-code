@@ -8,11 +8,12 @@
 
 class Solver {
   private:
-    static GRBEnv _env;
+    GRBEnv _env;
 
   public:
-    static void solve(const Graph &, const std::vector<NodeSet> &,
-                      Graph::NodeMap<double> &);
+    Solver();
+    ~Solver();
+    double solve(const Graph &, std::vector<NodeSet> &, std::vector<double> &);
 };
 
 #endif // SOlVER_H

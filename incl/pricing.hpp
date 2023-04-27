@@ -2,19 +2,19 @@
 #define PRICING_HPP
 
 #include "utils.hpp"
+#include <gurobi_c++.h>
 #include <vector>
 
 class Pricing {
   public:
     /*
-    ** Solve the pricing problem for a given graph and weights of each node.
-    ** In this case, we are solving the maximum weighted independent (stable)
-    ** set and adding to std::vector<NodeSet> any independent set with weight
-    ** greater than 1.
-    ** Returns the number of independent sets added.
+    ** Solve the pricing problem for the given graph and its dual solution
+    ** As thre result, we add the respective constrains to the model and
+    ** to the vector of independent sets.
     */
-    static int solve(const Graph &, const Graph::NodeMap<double> &,
-                     std::vector<NodeSet> &);
+    static bool solve(const Graph &, const Graph::NodeMap<double> &,
+                      std::vector<NodeSet> &, GRBModel &,
+                      const Graph::NodeMap<GRBVar> &, std::vector<GRBConstr> &);
 };
 
 #endif

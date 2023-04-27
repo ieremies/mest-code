@@ -4,8 +4,8 @@ HOMEDIR  = .
 # TODO ignore warnings in include
 PLATFORM = linux64
 CC       = g++
-CC_WARN  = -Wall -Wextra -pedantic -Wshadow # -Weffc++
-CC_ARGS  = -g -march=native -O3 -std=c++17 $(CC_WARN)
+CC_WARN  = -Wall -Wextra -pedantic -Wshadow -Weffc++
+CC_ARGS  = -g -march=native -std=c++17 $(CC_WARN) # -O3
 CC_LIB   = -lm -lpthread
 
 #================ LEMON =======================================================
@@ -18,7 +18,7 @@ GUROBI_DIR = /opt/gurobi1000/linux64
 #FLAGVERSION := $(shell gurobi_cl --version | cut -c 26,28 | head -n 1)
 FLAGVERSION := 100
 
-GUROBI_INC = -I$(GUROBI_DIR)/include
+GUROBI_INC = -isystem$(GUROBI_DIR)/include
 GUROBI_LIB = -L$(GUROBI_DIR)/lib -lgurobi_c++ -lgurobi$(FLAGVERSION)
 
 #===============================================================================
@@ -32,8 +32,8 @@ HOMEDIR_BIN = $(HOMEDIR)/bin
 INC = $(GUROBI_INC) $(LEMON_INC) -I$(HOMEDIR_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) $(LEMON_LIB)
 
-_EX = main.cpp # main executable
-_SR = pricing.cpp solver.cpp utils.cpp
+_EX = main.cpp
+_SR = pricing.cpp solver.cpp utils.cpp branch.cpp
 _OB = $(_SR:.cpp=.o) # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 
