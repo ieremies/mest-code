@@ -78,8 +78,6 @@
 #include "TargetConditionals.h"
 #endif
 
-// TODO: use defined(_POSIX_VERSION) for some of these things?
-
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define LOGURU_PTHREADS 0
 #define LOGURU_WINTHREADS 1
@@ -1083,8 +1081,6 @@ void set_thread_name(const char *name) {
     strncpy_s(thread_name_buffer(), LOGURU_THREADNAME_WIDTH + 1, name,
               _TRUNCATE);
 #else  // LOGURU_PTHREADS
-       // TODO: on these weird platforms we should also store the thread name
-       // in a generic thread-local storage.
     (void)name;
 #endif // LOGURU_PTHREADS
 }
@@ -1933,7 +1929,6 @@ Text ec_to_text(EcHandle ec_handle) {
 namespace loguru {
 void install_signal_handlers(const SignalOptions &signal_options) {
     (void)signal_options;
-    // TODO: implement signal handlers on windows
 }
 } // namespace loguru
 
