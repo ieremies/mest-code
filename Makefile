@@ -1,12 +1,11 @@
 HOMEDIR  = .
 
 # TODO Maybe use this to set flags? https://wiki.gentoo.org/wiki/Safe_CFLAGS
-# TODO ignore warnings in include
 PLATFORM = linux64
 CC       = g++
 CC_WARN  = -Wall -Wextra -pedantic -Wshadow -Weffc++
 CC_ARGS  = -g -march=native -std=c++17 $(CC_WARN) # -O3
-CC_LIB   = -lm -lpthread
+CC_LIB   = -lm -lpthread -ldl
 
 #================ LEMON =======================================================
 LEMON_DIR = /usr/local
@@ -18,8 +17,12 @@ GUROBI_DIR = /opt/gurobi1000/linux64
 #FLAGVERSION := $(shell gurobi_cl --version | cut -c 26,28 | head -n 1)
 FLAGVERSION := 100
 
-GUROBI_INC = -isystem$(GUROBI_DIR)/include
+GUROBI_INC = -isystem$(GUROBI_DIR)/include # used isystem to ignore warnings
 GUROBI_LIB = -L$(GUROBI_DIR)/lib -lgurobi_c++ -lgurobi$(FLAGVERSION)
+
+#================= LOGURU =======================================================
+LOGURU_DIR = $(HOMEDIR)/lib
+LOGURU_INC = -I$(LOGURU_DIR)
 
 #===============================================================================
 HOMEDIR_INC = $(HOMEDIR)/incl
@@ -29,12 +32,12 @@ HOMEDIR_BIN = $(HOMEDIR)/bin
 
 #---------------------------------------------
 # define includes and libraries
-INC = $(GUROBI_INC) $(LEMON_INC) -I$(HOMEDIR_INC)
+INC = $(GUROBI_INC) $(LEMON_INC) -I$(HOMEDIR_INC) -I $(LOGURU_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) $(LEMON_LIB)
 
 _EX = main.cpp
 _SR = pricing.cpp solver.cpp utils.cpp branch.cpp
-_OB = $(_SR:.cpp=.o) # all object files
+_OB = $(_SR:.cpp=.o) loguru.o # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 
 # Complete paths

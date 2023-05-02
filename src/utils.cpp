@@ -54,3 +54,12 @@ bool checkInteger(Graph::NodeMap<double> &weights,
     }
     return true;
 }
+
+std::string Utils::NodeSet_to_string(const Graph &g, const NodeSet &set) {
+    std::string s = "{ ";
+    for (Graph::Node n : set) {
+        s += std::to_string(g.id(n)) + ", ";
+    }
+    s += "}";
+    return s;
+}

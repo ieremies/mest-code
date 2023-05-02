@@ -2,8 +2,11 @@
 #include "../incl/pricing.hpp"
 #include "../incl/solver.hpp"
 #include "../incl/utils.hpp"
+#include "../lib/loguru.hpp"
 #include <fstream>
 #include <iostream>
+#include <lemon/core.h>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -54,9 +57,17 @@ void initialSets(Graph &g, std::vector<NodeSet> &indep_sets) {
 */
 int primal_heuristic(const Graph &g) { return 10000000; }
 
-int main(int, char **argv) {
+int main(int argc, char **argv) {
+    // Logging config
+    loguru::init(argc, argv);
+    loguru::add_file("log.log", loguru::FileMode::Truncate,
+                     loguru::Verbosity_MAX);
+
+    // Read the instance and create the graph
     Graph g;
     readDimacsInstance(argv[1], g);
+    LOG_F(INFO, "Instance with %d vertexes and %d edges", lemon::countNodes(g),
+          lemon::countEdges(g));
 
     int upper_bound = primal_heuristic(g);
 
@@ -69,16 +80,18 @@ int main(int, char **argv) {
     Branch tree(g, indep_sets);
     while (true) {
         tree.next(g, indep_sets);
-        indep_sets.clear();
+        indep_sets.clear(); // BUG while i cant clear the indep_sets
         initialSets(g, indep_sets);
 
-        std::vector<double> x_s(0, 0);
+        std::map<NodeSet, double> x_s;
         Solver solver = Solver();
         sol = solver.solve(g, indep_sets, x_s); // BUG esse sol é obj da dual
-        std::cout << "sol: " << sol << std::endl;
+        LOG_F(INFO, "Solved with value %f", sol);
 
-        if (tree.branch(g, indep_sets, x_s) == 0)
+        if (tree.branch(g, indep_sets, x_s) == 0) {
+            LOG_F(INFO, "Stoped branching!");
             break;
+        }
     }
 
     return 0;

@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include <gurobi_c++.h>
 #include <lemon/list_graph.h>
+#include <map>
 #include <vector>
 
 class Solver {
@@ -13,7 +14,8 @@ class Solver {
   public:
     Solver();
     ~Solver();
-    double solve(const Graph &, std::vector<NodeSet> &, std::vector<double> &);
+    double solve(const Graph &, std::vector<NodeSet> &,
+                 std::map<NodeSet, double> &);
 };
 
 #endif // SOlVER_H

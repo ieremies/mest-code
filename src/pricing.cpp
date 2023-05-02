@@ -1,14 +1,17 @@
 #include "../incl/pricing.hpp"
+#include "../incl/utils.hpp"
+#include "../lib/loguru.hpp"
 #include <gurobi_c++.h>
 
 // maximize     x_v weight_v
 // subjected to x_v + x_w <= 1 for all edges (v,w)
 //              x_v binary for all nodes v
-bool Pricing::solve(const Graph &g, const Graph::NodeMap<double> &weight,
-                    std::vector<NodeSet> &indep_sets, GRBModel &model,
-                    const Graph::NodeMap<GRBVar> &var,
-                    std::vector<GRBConstr> &constrs) {
+NodeSet Pricing::solve(const Graph &g, const Graph::NodeMap<double> &weight) {
+    LOG_SCOPE_F(INFO, "Pricing.");
+
     GRBEnv env = GRBEnv();
+    env.set(GRB_IntParam_OutputFlag, 0);
+
     GRBModel pricing_model(env);
     pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
 
@@ -32,27 +35,20 @@ bool Pricing::solve(const Graph &g, const Graph::NodeMap<double> &weight,
 
     pricing_model.optimize();
 
+    // If there is no set with weight above 1, we are done.
+    if (pricing_model.get(GRB_DoubleAttr_ObjVal) <= 1) {
+        LOG_F(INFO, "No set with weight above 1. (cost %f)",
+              pricing_model.get(GRB_DoubleAttr_ObjVal));
+        return {};
+    }
     // Retrieve the set of selected nodes.
     NodeSet set;
     for (Graph::NodeIt n(g); n != lemon::INVALID; ++n)
         if (x[n].get(GRB_DoubleAttr_X) > 0.5)
             set.insert(n);
 
-    // If there is no set with weight above 1, we are done.
-    if (set.size() == 0)
-        return false;
-
-    // If the chosen set is already in the list, we are done.
-    for (NodeSet s : indep_sets)
-        if (s == set)
-            return false;
-
-    // Otherwise, add the set to the list.
-    indep_sets.push_back(set);
-    GRBLinExpr c;
-    for (auto node : set)
-        c += var[node];
-    constrs.push_back(model.addConstr(c <= 1));
-
-    return true;
+    LOG_F(INFO, "Princing with cost %f, set %s.",
+          pricing_model.get(GRB_DoubleAttr_ObjVal),
+          Utils::NodeSet_to_string(g, set).c_str());
+    return set;
 }

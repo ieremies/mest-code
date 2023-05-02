@@ -1,7 +1,9 @@
 #include "../incl/solver.hpp"
 #include "../incl/pricing.hpp"
 #include "../incl/utils.hpp"
+#include "../lib/loguru.hpp"
 #include <gurobi_c++.h>
+#include <gurobi_c.h>
 #include <lemon/core.h>
 #include <lemon/list_graph.h>
 #include <set>
@@ -14,13 +16,33 @@ Solver::Solver() : _env(GRBEnv()) {
     _env.set(GRB_DoubleParam_FeasibilityTol, 1e-9);
     _env.set(GRB_DoubleParam_OptimalityTol, 1e-9);
     _env.set(GRB_IntParam_NumericFocus, 1);
+    _env.set(GRB_IntParam_OutputFlag, 0);
     _env.start();
 }
 
 Solver::~Solver() {}
 
+void add_constrain(GRBModel &model, const Graph::NodeMap<GRBVar> &var,
+                   std::map<NodeSet, GRBConstr> &constrs,
+                   std::vector<NodeSet> &indep_sets, const NodeSet &set) {
+
+    CHECK_F(std::find(indep_sets.begin(), indep_sets.end(), set) ==
+                indep_sets.end(),
+            "The set is already in the list.");
+
+    GRBLinExpr c = 0;
+    for (Graph::Node node : set)
+        c += var[node];
+    constrs[set] = model.addConstr(c <= 1.0);
+
+    indep_sets.push_back(set);
+    LOG_F(INFO, "Added it. We have now %d independent sets.",
+          (int)indep_sets.size());
+}
+
 double Solver::solve(const Graph &g, std::vector<NodeSet> &indep_sets,
-                     std::vector<double> &x_s) {
+                     std::map<NodeSet, double> &x_s) {
+    LOG_SCOPE_F(INFO, "Solver.");
     GRBModel model(_env);
     model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
 
@@ -33,33 +55,40 @@ double Solver::solve(const Graph &g, std::vector<NodeSet> &indep_sets,
     model.update();
 
     // sum of weights of nodes in an independent set <= 1
-    std::vector<GRBConstr> constrs;
+    std::map<NodeSet, GRBConstr> constrs;
     for (NodeSet set : indep_sets) {
-        if (set.empty())
-            continue;
+        CHECK_F(set.size() > 0, "Empty set in the list.");
         GRBLinExpr c = 0;
         for (Graph::Node node : set)
             c += var[node];
-        GRBConstr constr = model.addConstr(c <= 1.0);
-        constrs.push_back(constr);
+        constrs[set] = model.addConstr(c <= 1.0);
     }
 
+    LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
     Graph::NodeMap<double> weight(g);
-    do {
+    while (true) {
         model.optimize();
 
         // get the weights of the nodes
         for (Graph::NodeIt n(g); n != lemon::INVALID; ++n)
             weight[n] = var[n].get(GRB_DoubleAttr_X);
 
-    } while (Pricing::solve(g, weight, indep_sets, model, var, constrs));
+        NodeSet set = Pricing::solve(g, weight);
+
+        if (set.empty()) {
+            LOG_F(INFO, "New set is empty. Stopping.");
+            break;
+        }
+
+        add_constrain(model, var, constrs, indep_sets, set);
+    }
 
     // for each constrain, get its shadow price and save
     // it as the correspondent x_s
-    x_s.resize(constrs.size());
-    for (int i = 0; i < constrs.size(); i++)
-        x_s[i] = constrs[i].get(GRB_DoubleAttr_Pi);
+    for (NodeSet set : indep_sets) {
+        x_s[set] = constrs[set].get(GRB_DoubleAttr_Pi);
+    }
 
-    // Return solution
+    // Return the dual objective solution
     return model.get(GRB_DoubleAttr_ObjVal);
 }

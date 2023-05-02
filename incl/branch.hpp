@@ -1,4 +1,5 @@
 #include "../incl/utils.hpp"
+#include <map>
 #include <stack>
 #include <vector>
 
@@ -7,7 +8,8 @@ class BranchNode {
     Graph g;
     std::vector<NodeSet> indep_sets;
 
-    BranchNode(const Graph &, const std::vector<NodeSet> &);
+    BranchNode(const Graph &, const std::vector<NodeSet> &,
+               Graph::NodeMap<Graph::Node> &);
     ~BranchNode();
 };
 
@@ -34,7 +36,7 @@ class Branch {
     ** Returns the number of branchs created (none if the solution is integer).
     */
     int branch(const Graph &, const std::vector<NodeSet> &,
-               const std::vector<double> &x_s);
+               const std::map<NodeSet, double> &x_s);
 
     /*
     ** Populates the graph and the independent sets with the next branch.

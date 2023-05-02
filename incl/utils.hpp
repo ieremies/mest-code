@@ -4,6 +4,7 @@
 #include <gurobi_c++.h>
 #include <lemon/list_graph.h>
 #include <set>
+#include <string>
 #include <vector>
 
 #define EPS 0.0000000001
@@ -20,6 +21,7 @@ class Utils {
     static void printNodeSet(const NodeSet &, const Graph &);
     static void printGraph(const Graph &);
     static void assertColoring(const Graph &, const Graph::NodeMap<Color> &);
+    static std::string NodeSet_to_string(const Graph &, const NodeSet &);
 };
 
 #endif // UTILS_H
