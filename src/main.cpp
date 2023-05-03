@@ -37,6 +37,8 @@ void readDimacsInstance(std::string filename, Graph &g) {
         sscanf(line.c_str(), "e %d %d", &u, &v);
         g.addEdge(nodes[u - 1], nodes[v - 1]);
     }
+    LOG_F(INFO, "Read instance with %d vertexes and %d edges",
+          lemon::countNodes(g), lemon::countEdges(g));
 }
 
 /*
@@ -55,7 +57,7 @@ void initialSets(Graph &g, std::vector<NodeSet> &indep_sets) {
 /*
 ** Defines the initial upper bound.
 */
-int primal_heuristic(const Graph &g) { return 10000000; }
+int primal_heuristic(const Graph &) { return 10000000; }
 
 int main(int argc, char **argv) {
     // Logging config
@@ -66,15 +68,14 @@ int main(int argc, char **argv) {
     // Read the instance and create the graph
     Graph g;
     readDimacsInstance(argv[1], g);
-    LOG_F(INFO, "Instance with %d vertexes and %d edges", lemon::countNodes(g),
-          lemon::countEdges(g));
 
-    int upper_bound = primal_heuristic(g);
+    // int upper_bound = primal_heuristic(g);
 
     std::vector<NodeSet> indep_sets;
     initialSets(g, indep_sets);
 
-    double sol = 0; // place holder
+    double sol = 0;                // place holder
+    std::map<NodeSet, double> x_s; // x[s] = 1 if s is in the solution
 
     // Create the branching tree with the initial node
     Branch tree(g, indep_sets);
@@ -83,9 +84,8 @@ int main(int argc, char **argv) {
         indep_sets.clear(); // BUG while i cant clear the indep_sets
         initialSets(g, indep_sets);
 
-        std::map<NodeSet, double> x_s;
-        Solver solver = Solver();
-        sol = solver.solve(g, indep_sets, x_s); // BUG esse sol é obj da dual
+        x_s.clear();
+        sol = Solver().solve(g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %f", sol);
 
         if (tree.branch(g, indep_sets, x_s) == 0) {

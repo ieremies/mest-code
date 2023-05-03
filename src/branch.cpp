@@ -19,18 +19,18 @@ typedef std::pair<Graph::Node, Graph::Node> NodePair;
 bool find_vertexes(const Graph &g, const std::vector<NodeSet> &indep_set,
                    std::map<NodeSet, double> x_s, Graph::Node &u,
                    Graph::Node &v) {
-    int nnodes = lemon::countNodes(g);
     std::map<NodePair, double> diff;
     for (NodeSet set : indep_set)
-        for (Graph::Node u : set)
-            for (Graph::Node v : set) {
-                if (u == v or g.id(u) > g.id(v))
+        for (Graph::Node _u : set)
+            for (Graph::Node _v : set) {
+                if (_u == _v or g.id(_u) > g.id(_v))
                     continue;
                 // if (u,v) is in map, just add the value
-                if (diff.find(std::make_pair(u, v)) != diff.end())
-                    diff[std::make_pair(u, v)] += x_s[set];
+                if (diff.find(std::make_pair(_u, _v)) != diff.end())
+                    diff[std::make_pair(_u, _v)] += x_s[set];
                 else
-                    diff.insert(std::make_pair(std::make_pair(u, v), x_s[set]));
+                    diff.insert(
+                        std::make_pair(std::make_pair(_u, _v), x_s[set]));
             }
     // iterate over all pairs in the map diff and find the closest to 0.5
     double min = 100;

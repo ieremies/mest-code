@@ -36,8 +36,7 @@ void add_constrain(GRBModel &model, const Graph::NodeMap<GRBVar> &var,
     constrs[set] = model.addConstr(c <= 1.0);
 
     indep_sets.push_back(set);
-    LOG_F(INFO, "Added it. We have now %d independent sets.",
-          (int)indep_sets.size());
+    LOG_F(INFO, "We have now %d independent sets.", (int)indep_sets.size());
 }
 
 double Solver::solve(const Graph &g, std::vector<NodeSet> &indep_sets,
