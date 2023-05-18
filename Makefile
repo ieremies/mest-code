@@ -21,7 +21,7 @@ GUROBI_INC = -isystem$(GUROBI_DIR)/include # used isystem to ignore warnings
 GUROBI_LIB = -L$(GUROBI_DIR)/lib -lgurobi_c++ -lgurobi$(FLAGVERSION)
 
 #================= LOGURU =======================================================
-LOGURU_DIR = $(HOMEDIR)/lib/loguro
+LOGURU_DIR = $(HOMEDIR)/lib/
 LOGURU_INC = -I$(LOGURU_DIR)
 
 #===============================================================================
@@ -41,7 +41,7 @@ LIB = $(CC_LIB) $(GUROBI_LIB) $(LEMON_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
 _SR = pricing.cpp solver.cpp utils.cpp branch.cpp
-_OB = $(_SR:.cpp=.o) # all object files
+_OB = $(_SR:.cpp=.o) loguro.o # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 
 # Complete paths
@@ -51,6 +51,8 @@ _BIN = $(patsubst %,$(HOMEDIR_BIN)/%,$(_BN))
 
 all: $(_OBJ) $(_SRC) $(_BIN)
 
+$(HOMEDIR_OBJ)/loguro.o: $(LOGURU_DIR)/loguru.cpp
+	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
 
 $(HOMEDIR_BIN)/%.e: $(HOMEDIR_OBJ)/%.o $(_OBJ)
 	$(CC) $(CC_ARGS) $^ -o $@ $(LIB) $(INC)
@@ -58,5 +60,7 @@ $(HOMEDIR_BIN)/%.e: $(HOMEDIR_OBJ)/%.o $(_OBJ)
 $(HOMEDIR_OBJ)/%.o: $(HOMEDIR_SRC)/%.cpp
 	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
 
+# Remove all objects and executables
+# except loguru.o
 clean:
 	rm -f $(HOMEDIR)/*~ $(HOMEDIR_BIN)/*.e $(HOMEDIR_OBJ)/*.o $(HOMEDIR_SRC)/*~
