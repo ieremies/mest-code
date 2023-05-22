@@ -10,7 +10,10 @@ NodeSet Pricing::solve(const Graph &g, const Graph::NodeMap<double> &weight) {
     LOG_SCOPE_F(INFO, "Pricing.");
 
     GRBEnv env = GRBEnv();
+    env.set(GRB_IntParam_LogToConsole, 0);
     env.set(GRB_IntParam_OutputFlag, 0);
+    env.set(GRB_IntParam_Threads, 1);
+    env.start();
 
     GRBModel pricing_model(env);
     pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);

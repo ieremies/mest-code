@@ -11,12 +11,16 @@
 #include <vector>
 
 Solver::Solver() : _env(GRBEnv()) {
+    // disable gurobi license output
+    _env.set(GRB_IntParam_LogToConsole, 0);
     _env.set(GRB_IntParam_Threads, 1);
     _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
     _env.set(GRB_DoubleParam_FeasibilityTol, 1e-9);
     _env.set(GRB_DoubleParam_OptimalityTol, 1e-9);
-    _env.set(GRB_IntParam_NumericFocus, 1);
     _env.set(GRB_IntParam_OutputFlag, 0);
+    _env.set(GRB_IntParam_NumericFocus, 1);
+    // make gurobi use only one thread
+    _env.set(GRB_IntParam_Threads, 1);
     _env.start();
 }
 
