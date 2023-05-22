@@ -3,6 +3,7 @@
 #include "../incl/solver.hpp"
 #include "../incl/utils.hpp"
 #include "../lib/loguru.hpp"
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <lemon/core.h>
@@ -79,6 +80,11 @@ int main(int argc, char **argv) {
 
     // Create the branching tree with the initial node
     Branch tree(g, indep_sets);
+
+    // Start counting time limit
+    const std::chrono::seconds timeLimit(600);
+    const auto startTime = std::chrono::steady_clock::now();
+
     while (true) {
         tree.next(g, indep_sets);
         indep_sets.clear(); // BUG while i cant clear the indep_sets
@@ -90,6 +96,16 @@ int main(int argc, char **argv) {
 
         if (tree.branch(g, indep_sets, x_s) == 0) {
             LOG_F(INFO, "Stoped branching!");
+            break;
+        }
+
+        // check time limit
+        const auto currentTime = std::chrono::steady_clock::now();
+        const auto elapsedTime =
+            std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                             startTime);
+        if (elapsedTime > timeLimit) {
+            LOG_F(INFO, "Time limit reached!");
             break;
         }
     }
