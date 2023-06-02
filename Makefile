@@ -3,7 +3,7 @@ HOMEDIR  = .
 # TODO Maybe use this to set flags? https://wiki.gentoo.org/wiki/Safe_CFLAGS
 PLATFORM = linux64
 CC       = g++
-CC_WARN  = -Wall -Wextra -pedantic -Wshadow -Weffc++
+CC_WARN  = -Wall -Wextra -pedantic -Wshadow -Weffc++ -Werror
 CC_ARGS  = -g -march=native -std=c++17 $(CC_WARN) # -O3
 CC_LIB   = -lm -lpthread -ldl
 
@@ -40,7 +40,7 @@ INC = $(GUROBI_INC) $(LEMON_INC) -I$(HOMEDIR_INC) $(LOGURU_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) $(LEMON_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
-_SR = pricing.cpp solver.cpp utils.cpp branch.cpp
+_SR = pricing.cpp solver.cpp utils.cpp branch2.cpp graph.cpp
 _OB = $(_SR:.cpp=.o) loguro.o # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 

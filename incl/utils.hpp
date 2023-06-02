@@ -1,27 +1,20 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <gurobi_c++.h>
-#include <lemon/list_graph.h>
 #include <set>
 #include <string>
-#include <vector>
 
-#define EPS 0.0000000001
+#include "../incl/graph.hpp"
+
+#define EPS 1e-9
 #define TIMELIMIT 3600
 
-using NodeSet = std::set<lemon::ListGraph::Node>;
-using Graph = lemon::ListGraph;
-using Color = unsigned int;
+using namespace std;
+using node_set = set<Graph::node>;
+using node = Graph::node;
+using edge = Graph::edge;
+using color = unsigned int;
 
-class Utils {
-  public:
-    static void printSolution(const Graph &, const std::vector<NodeSet> &,
-                              const Graph::NodeMap<double> &);
-    static void printNodeSet(const NodeSet &, const Graph &);
-    static void printGraph(const Graph &);
-    static void assertColoring(const Graph &, const Graph::NodeMap<Color> &);
-    static std::string NodeSet_to_string(const Graph &, const NodeSet &);
-};
+string to_string(const node_set&);
 
-#endif // UTILS_H
+#endif  // UTILS_H

@@ -1,22 +1,23 @@
+#include <algorithm>
+#include <vector>
+
 #include "../incl/solver.hpp"
+
+#include <gurobi_c++.h>
+
 #include "../incl/pricing.hpp"
 #include "../incl/utils.hpp"
 #include "../lib/loguru.hpp"
-#include <gurobi_c++.h>
-#include <gurobi_c.h>
-#include <lemon/core.h>
-#include <lemon/list_graph.h>
-#include <set>
-#include <string>
-#include <vector>
 
-Solver::Solver() : _env(GRBEnv()) {
+Solver::Solver()
+    : _env(true)
+{
     // disable gurobi license output
     _env.set(GRB_IntParam_LogToConsole, 0);
     _env.set(GRB_IntParam_Threads, 1);
     _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
-    _env.set(GRB_DoubleParam_FeasibilityTol, 1e-9);
-    _env.set(GRB_DoubleParam_OptimalityTol, 1e-9);
+    _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
+    _env.set(GRB_DoubleParam_OptimalityTol, EPS);
     _env.set(GRB_IntParam_OutputFlag, 0);
     _env.set(GRB_IntParam_NumericFocus, 1);
     // make gurobi use only one thread
@@ -24,71 +25,81 @@ Solver::Solver() : _env(GRBEnv()) {
     _env.start();
 }
 
-Solver::~Solver() {}
-
-void add_constrain(GRBModel &model, const Graph::NodeMap<GRBVar> &var,
-                   std::map<NodeSet, GRBConstr> &constrs,
-                   std::vector<NodeSet> &indep_sets, const NodeSet &set) {
-
-    CHECK_F(std::find(indep_sets.begin(), indep_sets.end(), set) ==
-                indep_sets.end(),
+void add_constrain(GRBModel& model,
+                   const vector<GRBVar>& var,
+                   map<node_set, GRBConstr>& constrs,
+                   vector<node_set>& indep_sets,
+                   const node_set& set)
+{
+    CHECK_F(find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
             "The set is already in the list.");
 
     GRBLinExpr c = 0;
-    for (Graph::Node node : set)
-        c += var[node];
+    for (node n : set)
+        c += var[n];
     constrs[set] = model.addConstr(c <= 1.0);
 
     indep_sets.push_back(set);
     LOG_F(INFO, "We have now %d independent sets.", (int)indep_sets.size());
 }
 
-double Solver::solve(const Graph &g, std::vector<NodeSet> &indep_sets,
-                     std::map<NodeSet, double> &x_s) {
+double Solver::solve(const Graph& g,
+                     vector<node_set>& indep_sets,
+                     map<node_set, double>& x_s)
+{
     LOG_SCOPE_F(INFO, "Solver.");
     GRBModel model(_env);
     model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
 
     // each vertex has a weight
-    Graph::NodeMap<GRBVar> var(g);
-    for (Graph::NodeIt n(g); n != lemon::INVALID; ++n)
-        var[n] = model.addVar(0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS,
-                              "node " + std::to_string(g.id(n)));
+    // BUG cuidado, haverá vars não incializadas
+    vector<GRBVar> vars(g.get_n());
+    for_nodes(g, n) {
+        vars[n] = model.addVar(
+            0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS, "node " + to_string(n));
+    }
 
     model.update();
 
     // sum of weights of nodes in an independent set <= 1
-    std::map<NodeSet, GRBConstr> constrs;
-    for (NodeSet set : indep_sets) {
-        CHECK_F(set.size() > 0, "Empty set in the list.");
+    map<node_set, GRBConstr> constrs;
+    for (const node_set& set : indep_sets) {
+        CHECK_F(!set.empty(), "Empty set in the list.");
         GRBLinExpr c = 0;
-        for (Graph::Node node : set)
-            c += var[node];
+        for (node n : set) {
+            CHECK_F(g.is_active(n), "node is not active.");
+            c += vars[n];
+        }
         constrs[set] = model.addConstr(c <= 1.0);
     }
 
     LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
-    Graph::NodeMap<double> weight(g);
+    // for (const node_set& set : indep_sets) {
+    //     LOG_F(INFO, "Set %s", to_string(set).c_str());
+    // }
+
+    vector<double> weight(g.get_n());
     while (true) {
         model.optimize();
 
         // get the weights of the nodes
-        for (Graph::NodeIt n(g); n != lemon::INVALID; ++n)
-            weight[n] = var[n].get(GRB_DoubleAttr_X);
+        for_nodes(g, n) {
+            weight[n] = vars[n].get(GRB_DoubleAttr_X);
+        }
 
-        NodeSet set = Pricing::solve(g, weight);
+        node_set set = Pricing::solve(g, weight);
 
         if (set.empty()) {
             LOG_F(INFO, "New set is empty. Stopping.");
             break;
         }
 
-        add_constrain(model, var, constrs, indep_sets, set);
+        add_constrain(model, vars, constrs, indep_sets, set);
     }
 
     // for each constrain, get its shadow price and save
     // it as the correspondent x_s
-    for (NodeSet set : indep_sets) {
+    for (const node_set& set : indep_sets) {
         x_s[set] = constrs[set].get(GRB_DoubleAttr_Pi);
     }
 

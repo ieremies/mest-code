@@ -1,21 +1,20 @@
 #ifndef SOLVER_H
 #define SOLVER_H
 
-#include "utils.hpp"
-#include <gurobi_c++.h>
-#include <lemon/list_graph.h>
 #include <map>
 #include <vector>
 
-class Solver {
-  private:
+#include <gurobi_c++.h>
+
+#include "utils.hpp"
+
+class Solver
+{
     GRBEnv _env;
 
   public:
     Solver();
-    ~Solver();
-    double solve(const Graph &, std::vector<NodeSet> &,
-                 std::map<NodeSet, double> &);
+    double solve(const Graph&, vector<node_set>&, map<node_set, double>&);
 };
 
-#endif // SOlVER_H
+#endif  // SOlVER_H

@@ -1,0 +1,26 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-g",
+      "-march=native",
+      "-std=c++17",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-Wshadow",
+      "-Weffc++",
+      "-c",
+      "-isystem/opt/gurobi1000/linux64/include",
+      "-I/usr/local/include/lemon",
+      "-I./incl",
+      "-I./lib/",
+      "-o",
+      "obj/solver.o",
+      "src/solver.cpp"
+    ],
+    "directory": "/home/ieremies/proj/mest/code",
+    "file": "/home/ieremies/proj/mest/code/src/solver.cpp",
+    "output": "/home/ieremies/proj/mest/code/obj/solver.o"
+  }
+]

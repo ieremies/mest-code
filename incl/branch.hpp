@@ -1,45 +1,32 @@
-#include "../incl/utils.hpp"
 #include <map>
 #include <stack>
 #include <vector>
 
-class BranchNode {
+#include "../incl/utils.hpp"
+
+class Branch
+{
   public:
-    Graph g;
-    std::vector<NodeSet> indep_sets;
+    int branch(const Graph&,
+               const vector<node_set>&,
+               const map<node_set, double>& x_s,
+               const double&);
 
-    BranchNode(const Graph &, const std::vector<NodeSet> &,
-               Graph::NodeMap<Graph::Node> &);
-    ~BranchNode();
-};
+    vector<node_set> next(Graph&, const double&);
 
-class Branch {
+    struct node
+    {
+        bool conflict_done;
+        bool contract_done;
+        double obj_val;
+        Graph::node u, v;
+        vector<node_set> indep_sets;
+    };
+    Branch()
+        : tree()
+    {
+    }
+
   private:
-    std::stack<BranchNode *> tree;
-
-  public:
-    /*
-    ** Create the branching tree with the initial graph and independent
-    ** set.
-    */
-    Branch(const Graph &, const std::vector<NodeSet> &);
-
-    /*
-    ** Deletes the tree and all the remaining BranchNodes.
-    */
-    ~Branch();
-
-    /*
-    ** Receives the graph, the independent sets and each of those x_s values.
-    ** Each x_s means if the independent set is in the solution or not.
-    **
-    ** Returns the number of branchs created (none if the solution is integer).
-    */
-    int branch(const Graph &, const std::vector<NodeSet> &,
-               const std::map<NodeSet, double> &x_s);
-
-    /*
-    ** Populates the graph and the independent sets with the next branch.
-    */
-    void next(Graph &, std::vector<NodeSet> &);
+    stack<Branch::node> tree;
 };
