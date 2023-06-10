@@ -3,13 +3,20 @@ HOMEDIR  = .
 # TODO Maybe use this to set flags? https://wiki.gentoo.org/wiki/Safe_CFLAGS
 PLATFORM = linux64
 CC       = g++
-CC_WARN  = -Wall -Wextra -pedantic -Wshadow -Weffc++ -Werror
-CC_ARGS  = -g -march=native -std=c++17 $(CC_WARN) # -O3
+CC_WARN  = -Wall -Wextra -Wpedantic -Wshadow -Weffc++
+CC_ARGS  = -march=native -std=c++17 $(CC_WARN)
 CC_LIB   = -lm -lpthread -ldl
+
+# All is the debug version
+all: CC_ARGS += -g -Werror -Og
+all: executable
+
+release: CC_ARGS += -O3 -DNDEBUG
+release: executable
 
 #================ LEMON =======================================================
 LEMON_DIR = /usr/local
-LEMON_INC = -I$(LEMON_DIR)/include/lemon
+LEMON_INC = -isystem$(LEMON_DIR)/include/lemon
 LEMON_LIB = -L$(LEMON_DIR)/lib -lemon
 
 #================= GUROBI =====================================================
@@ -49,7 +56,7 @@ _SRC = $(patsubst %,$(HOMEDIR_SRC)/%,$(_EX))
 _OBJ = $(patsubst %,$(HOMEDIR_OBJ)/%,$(_OB))
 _BIN = $(patsubst %,$(HOMEDIR_BIN)/%,$(_BN))
 
-all: $(_OBJ) $(_SRC) $(_BIN)
+executable: $(_OBJ) $(_SRC) $(_BIN)
 
 $(HOMEDIR_OBJ)/loguro.o: $(LOGURU_DIR)/loguru.cpp
 	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
