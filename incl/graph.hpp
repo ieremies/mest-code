@@ -12,6 +12,8 @@
     for (edge e = G.first_edge(); \
          e.first < G.get_n() and e.second < G.get_n(); \
          e = G.next_edge(e))
+#define for_adj(G, u, n) \
+    for (node n = G.first_adj_node(u); n < G.get_n(); n = G.next_adj_node(u, n))
 
 using namespace std;
 /*
@@ -55,12 +57,16 @@ class Graph
     node first_act_node() const;
     node next_act_node(node) const;
 
+    node first_adj_node(node) const;
+    node next_adj_node(node, node) const;
+
     void log() const;
+    void log_changes() const;
 
   private:
     node n;
     unsigned long int m;
-    stack<mod> delta;
+    vector<mod> delta;
     vector<node> deg;
     vector<bool> active;
     // BUG For some instances, this can be not enough

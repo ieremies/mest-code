@@ -12,7 +12,7 @@ class Branch
                const map<node_set, double>& x_s,
                const double&);
 
-    vector<node_set> next(Graph&, const double&);
+    vector<node_set> next(Graph&, const cost&, cost&);
 
     struct node
     {

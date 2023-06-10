@@ -14,14 +14,15 @@ Solver::Solver()
 {
     // disable gurobi license output
     _env.set(GRB_IntParam_LogToConsole, 0);
-    _env.set(GRB_IntParam_Threads, 1);
     _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
     _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
     _env.set(GRB_DoubleParam_OptimalityTol, EPS);
     _env.set(GRB_IntParam_OutputFlag, 0);
     _env.set(GRB_IntParam_NumericFocus, 1);
     // make gurobi use only one thread
-    _env.set(GRB_IntParam_Threads, 1);
+    if (SINGLE_THREAD) {
+        _env.set(GRB_IntParam_Threads, 1);
+    }
     _env.start();
 }
 
@@ -31,8 +32,9 @@ void add_constrain(GRBModel& model,
                    vector<node_set>& indep_sets,
                    const node_set& set)
 {
-    CHECK_F(find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
-            "The set is already in the list.");
+    DCHECK_F(
+        find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
+        "The set is already in the list.");
 
     GRBLinExpr c = 0;
     for (node n : set)
@@ -40,7 +42,7 @@ void add_constrain(GRBModel& model,
     constrs[set] = model.addConstr(c <= 1.0);
 
     indep_sets.push_back(set);
-    LOG_F(INFO, "We have now %d independent sets.", (int)indep_sets.size());
+    LOG_F(1, "We have now %d independent sets.", (int)indep_sets.size());
 }
 
 double Solver::solve(const Graph& g,
@@ -90,7 +92,9 @@ double Solver::solve(const Graph& g,
         node_set set = Pricing::solve(g, weight);
 
         if (set.empty()) {
-            LOG_F(INFO, "New set is empty. Stopping.");
+            LOG_F(INFO,
+                  "New set is empty. Stopping with %ld sets.",
+                  indep_sets.size());
             break;
         }
 

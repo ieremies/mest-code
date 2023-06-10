@@ -10,12 +10,14 @@
 //              x_v binary for all nodes v
 node_set Pricing::solve(const Graph& g, const vector<double>& weight)
 {
-    LOG_SCOPE_F(INFO, "Pricing.");
+    LOG_SCOPE_F(1, "Pricing.");
 
     GRBEnv env = GRBEnv(true);
     env.set(GRB_IntParam_LogToConsole, 0);
     env.set(GRB_IntParam_OutputFlag, 0);
-    env.set(GRB_IntParam_Threads, 1);
+    if (SINGLE_THREAD) {
+        env.set(GRB_IntParam_Threads, 1);
+    }
     env.start();
 
     GRBModel pricing_model(env);
@@ -43,11 +45,15 @@ node_set Pricing::solve(const Graph& g, const vector<double>& weight)
 
     // If there is no set with weight above 1, we are done.
     if (pricing_model.get(GRB_DoubleAttr_ObjVal) <= 1 + EPS) {
-        LOG_F(INFO,
+        LOG_F(1,
               "No set with weight above 1. (cost %f)",
               pricing_model.get(GRB_DoubleAttr_ObjVal));
         return {};
     }
+    /*
+    ** TODO para pegar mais de um conjunto, uma forma útil é remover os vértices
+    ** selecionados desse ILP e rodar de novo.
+    */
     // Retrieve the set of selected nodes.
     node_set set;
     for_nodes(g, n) {
@@ -56,7 +62,7 @@ node_set Pricing::solve(const Graph& g, const vector<double>& weight)
         }
     }
 
-    LOG_F(INFO,
+    LOG_F(1,
           "Princing with cost %f, set %s.",
           pricing_model.get(GRB_DoubleAttr_ObjVal),
           to_string(set).c_str());

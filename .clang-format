@@ -69,6 +69,7 @@ FixNamespaceComments: true
 ForEachMacros:
   - foreach
   - for_nodes
+  - for_adj
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeBlocks: Regroup

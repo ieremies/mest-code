@@ -128,7 +128,7 @@ void Graph::change(mod_type t, node u, node v)
     if (t == mod_type::contract) {
         do_contract(u, v);
     }
-    delta.push(mod {t, u, v});
+    delta.push_back(mod {t, u, v});
 }
 
 void Graph::undo(mod_type tc, node uc, node vc)
@@ -136,7 +136,7 @@ void Graph::undo(mod_type tc, node uc, node vc)
     CHECK_F(uc != vc, "Cannoct act with equal nodes.");
     CHECK_F(active[uc], "Interacting with inactive node.");
 
-    const auto [t, u, v] = delta.top();
+    const auto [t, u, v] = delta.back();
     CHECK_F(tc == t and uc == u and vc == v, "Undoing in the wrong order.");
 
     if (t == mod_type::conflict) {
@@ -145,7 +145,7 @@ void Graph::undo(mod_type tc, node uc, node vc)
     if (t == mod_type::contract) {
         undo_contract(u, v);
     }
-    delta.pop();
+    delta.pop_back();
 }
 
 unsigned long int Graph::add_edge(node u, node v)
@@ -213,4 +213,32 @@ void Graph::log() const
             }
         }
     }
+}
+
+void Graph::log_changes() const
+{
+    string log = "Changes: ";
+    for (auto [t, u, v] : delta) {
+        if (t == mod_type::conflict) {
+            log += "conflict (" + to_string(u) + "," + to_string(v) + ") | ";
+        } else {
+            log += "contract (" + to_string(u) + "," + to_string(v) + ") | ";
+        }
+    }
+    LOG_F(WARNING, "%s", log.c_str());
+}
+
+Graph::node Graph::first_adj_node(node u) const
+{
+    return next_adj_node(u, -1);
+}
+
+Graph::node Graph::next_adj_node(node u, node v) const
+{
+    for (node i = v + 1; i < n; i++) {
+        if (get_incidency(u, i) > 0) {
+            return i;
+        }
+    }
+    return n;
 }
