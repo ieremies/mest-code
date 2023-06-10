@@ -32,3 +32,5 @@
 *.app
 *.e
 
+log.log
+.cache
