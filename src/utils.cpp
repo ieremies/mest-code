@@ -18,7 +18,7 @@ void log_solution(const Graph& g,
                   const map<node_set, double>& x_s,
                   const double& sol)
 {
-    string log = "New upper bound with value: %f = ";
+    string log = "SOL: %f = ";
     for (auto& [s, x] : x_s) {
         if (x >= 1 - EPS) {
             log += to_string(s) + " ";

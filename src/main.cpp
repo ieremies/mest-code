@@ -6,6 +6,11 @@
 #include <vector>
 
 #define LOGURU_SCOPE_TIME_PRECISION 9
+#ifdef NDEBUG
+#    define LOGURU_VERBOSE loguru::Verbosity_WARNING
+#else
+#    define LOGURU_VERBOSE loguru::Verbosity_MAX
+#endif
 
 #include "../incl/branch.hpp"
 #include "../incl/graph.hpp"
@@ -80,15 +85,13 @@ int main(int argc, char** argv)
     loguru::g_preamble_date = false;
     loguru::g_preamble_thread = false;
     loguru::init(argc, argv);
-    loguru::add_file(
-        "log.log", loguru::FileMode::Truncate, loguru::Verbosity_MAX);
+    loguru::add_file("log.log", loguru::FileMode::Truncate, LOGURU_VERBOSE);
 
     // Read the instance and create the graph
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;
     cost upper_bound = dsatur(*g, indep_sets);
-    cost lower_bound = 0;
 
     cost sol = 0;
     map<node_set, double> x_s;  // x[s] = 1 if s is in the solution
@@ -111,8 +114,8 @@ int main(int argc, char** argv)
 
     } while (!indep_sets.empty() and !check_time());
 
-    LOG_F(INFO, "Timed out?: %d", check_time());
-    LOG_F(INFO, "Upper bound: %Lf", upper_bound);
+    LOG_F(WARNING, "Timed out?: %d", check_time());
+    LOG_F(WARNING, "Upper bound: %Lf", upper_bound);
 
     delete g;
 

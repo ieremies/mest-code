@@ -56,5 +56,12 @@ cost dsatur(const Graph& graph, vector<node_set>& indep_sets)
         indep_sets[vertex_color[n] - 1].insert(n);
     }
 
+    string log = "SOL: %f = ";
+    for (node_set s : indep_sets) {
+        log += to_string(s) + " ";
+    }
+    LOG_F(WARNING, log.c_str(), (double)indep_sets.size());
+    LOG_F(WARNING, "Contracts: ");
+
     return res;
 }

@@ -112,6 +112,8 @@ double Solver::solve(const Graph& g,
         }
     }
 
+    LOG_F(INFO, "Final model with %d sets.", (int)indep_sets.size());
+
     // for each constrain, get its shadow price and save
     // it as the correspondent x_s
     for (const node_set& set : indep_sets) {
