@@ -20,7 +20,6 @@ cost dsatur(const Graph& graph, vector<node_set>& indep_sets)
     vector<node> vertex_color(graph.get_n(), 0);
 
     node atual = max_element(sat_deg.begin(), sat_deg.end()) - sat_deg.begin();
-    DLOG_F(INFO, "DSATUR: first node %d ", atual);
 
     // Log sat_deg vector
 
@@ -45,7 +44,7 @@ cost dsatur(const Graph& graph, vector<node_set>& indep_sets)
             }
         }
         atual = max_element(sat_deg.begin(), sat_deg.end()) - sat_deg.begin();
-        DLOG_F(INFO, "DSATUR: next node %d ", atual);
+
     } while (sat_deg[atual] > 0 or vertex_color[atual] == 0);
 
     color res = *max_element(vertex_color.begin(), vertex_color.end());

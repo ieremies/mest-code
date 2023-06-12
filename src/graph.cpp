@@ -133,7 +133,7 @@ void Graph::change(mod_type t, node u, node v)
 
 void Graph::undo(mod_type tc, node uc, node vc)
 {
-    CHECK_F(uc != vc, "Cannoct act with equal nodes.");
+    CHECK_F(uc != vc, "Cannot act with equal nodes.");
     CHECK_F(active[uc], "Interacting with inactive node.");
 
     const auto [t, u, v] = delta.back();
@@ -217,12 +217,10 @@ void Graph::log() const
 
 void Graph::log_changes() const
 {
-    string log = "Changes: ";
+    string log = "Contracts: ";
     for (auto [t, u, v] : delta) {
-        if (t == mod_type::conflict) {
-            log += "conflict (" + to_string(u) + "," + to_string(v) + ") | ";
-        } else {
-            log += "contract (" + to_string(u) + "," + to_string(v) + ") | ";
+        if (t == mod_type::contract) {
+            log += "(" + to_string(u) + "," + to_string(v) + ") ";
         }
     }
     LOG_F(WARNING, "%s", log.c_str());

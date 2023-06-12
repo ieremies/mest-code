@@ -8,7 +8,7 @@
 class Pricing
 {
   public:
-    static node_set solve(const Graph&, const vector<double>&);
+    static vector<node_set> solve(const Graph&, const vector<double>&);
 };
 
 #endif

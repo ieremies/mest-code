@@ -7,12 +7,12 @@
 class Branch
 {
   public:
-    int branch(const Graph&,
-               const vector<node_set>&,
-               const map<node_set, double>& x_s,
-               const double&);
+    void branch(const Graph&,
+                const vector<node_set>&,
+                const map<node_set, double>& x_s,
+                const double&);
 
-    vector<node_set> next(Graph&, const cost&, cost&);
+    vector<node_set> next(Graph&, const cost&);
 
     struct node
     {

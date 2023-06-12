@@ -57,9 +57,9 @@ Graph* read_dimacs_instance(const string& filename)
         g->add_edge(u - 1, v - 1);
     }
     LOG_F(INFO,
-          "Read instance with %lu vertexes and %d edges",
-          g->get_m(),
-          g->get_n());
+          "Read instance with %d vertexes and %lu edges",
+          g->get_n(),
+          g->get_m());
     return g;
 }
 
@@ -77,11 +77,11 @@ bool integral(const map<node_set, double>& x_s)
 int main(int argc, char** argv)
 {
     // Logging config
-    // loguru::g_preamble_time = false;
     loguru::g_preamble_date = false;
     loguru::g_preamble_thread = false;
     loguru::init(argc, argv);
-    loguru::add_file("log.log", loguru::FileMode::Truncate, 0);
+    loguru::add_file(
+        "log.log", loguru::FileMode::Truncate, loguru::Verbosity_MAX);
 
     // Read the instance and create the graph
     Graph* g = read_dimacs_instance(argv[1]);
@@ -97,24 +97,18 @@ int main(int argc, char** argv)
 
     do {
         x_s.clear();
-        // g->log();
         sol = Solver().solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
 
-        if (integral(x_s)) {
-            if (sol < upper_bound + EPS) {
-                upper_bound = sol;
-                log_solution(*g, x_s, sol);
             }
-            if (sol - 1 < lower_bound + EPS) {
-                LOG_F(INFO, "Gap is closed! %Lf %Lf", lower_bound, upper_bound);
-                break;
-            }
+        if (integral(x_s) and sol + EPS < upper_bound) {
+            upper_bound = sol;
+            log_solution(*g, x_s, sol);
         } else {
             tree.branch(*g, indep_sets, x_s, sol);
         }
 
-        indep_sets = tree.next(*g, upper_bound, lower_bound);
+        indep_sets = tree.next(*g, upper_bound);
 
     } while (!indep_sets.empty() and !check_time());
 

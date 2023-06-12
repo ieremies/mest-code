@@ -45,21 +45,19 @@ pair<node, node> find_vertexes(const Graph& g,
     return make_pair(u, v);
 }
 
-int Branch::branch(const Graph& g,
-                   const vector<node_set>& indep_sets,
-                   const map<node_set, double>& x_s,
-                   const double& obj_val)
+void Branch::branch(const Graph& g,
+                    const vector<node_set>& indep_sets,
+                    const map<node_set, double>& x_s,
+                    const double& obj_val)
 {
     LOG_SCOPE_F(INFO, "Branch::Branch");
     auto [u, v] = find_vertexes(g, indep_sets, x_s);
     if (u >= g.get_n() || v >= g.get_n()) {
-        return 0;
+        return;
     }
 
     LOG_F(INFO, "Adding branch on %d and %d", u, v);
     tree.push(Branch::node {false, false, obj_val, u, v, indep_sets});
-
-    return 0;
 }
 
 vector<node_set> clean_sets(const mod_type& t,
@@ -103,38 +101,36 @@ bool check_indep(const Graph& g, const vector<node_set>& indep_sets)
     return true;
 }
 
-/*
-** Um nó é o próximo se sua obj_value é menor que o upper_bound e
-** algum dos dois branchs ainda precisam ser feitos.
-**
-** Se falhar por causa da obj_value, aidna precisa desfazer o último
-** branch.
-*/
-vector<node_set> Branch::next(Graph& g,
-                              const cost& upper_bound,
-                              cost& lower_bound)
+vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
 {
     LOG_SCOPE_F(INFO, "Branch::Next");
+
     if (tree.empty()) {
         return {};
     }
 
     // while worst than UB or completed
     Branch::node n = tree.top();
-    for (;
-         n.obj_val >= upper_bound + EPS || (n.conflict_done && n.contract_done);
-         n = tree.top())
+
+    // TODO tá certo esse +1?
+    while (n.obj_val >= upper_bound + EPS
+           or (n.conflict_done and n.contract_done))
     {
+        tree.pop();
+
         if (n.contract_done) {
             g.undo(mod_type::contract, n.u, n.v);
         } else if (n.conflict_done) {
             g.undo(mod_type::conflict, n.u, n.v);
         }
-        tree.pop();
+
         if (tree.empty()) {
             return {};
         }
+
+        n = tree.top();
     }
+
     tree.pop();
 
     LOG_F(INFO,
@@ -165,8 +161,8 @@ vector<node_set> Branch::next(Graph& g,
     g.change(t, n.u, n.v);
     tree.push(n);
 
-    lower_bound = n.obj_val;
     vector<node_set> ret = clean_sets(t, n.indep_sets, n.u, n.v);
     DCHECK_F(check_indep(g, ret), "not independent set");
+
     return ret;
 }

@@ -13,10 +13,10 @@ Solver::Solver()
     : _env(true)
 {
     // disable gurobi license output
-    _env.set(GRB_IntParam_LogToConsole, 0);
     _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
     _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
     _env.set(GRB_DoubleParam_OptimalityTol, EPS);
+    _env.set(GRB_IntParam_LogToConsole, 0);
     _env.set(GRB_IntParam_OutputFlag, 0);
     _env.set(GRB_IntParam_NumericFocus, 1);
     // make gurobi use only one thread
@@ -37,12 +37,12 @@ void add_constrain(GRBModel& model,
         "The set is already in the list.");
 
     GRBLinExpr c = 0;
-    for (node n : set)
+    for (const node& n : set) {
         c += var[n];
+    }
     constrs[set] = model.addConstr(c <= 1.0);
 
     indep_sets.push_back(set);
-    LOG_F(1, "We have now %d independent sets.", (int)indep_sets.size());
 }
 
 double Solver::solve(const Graph& g,
@@ -50,11 +50,11 @@ double Solver::solve(const Graph& g,
                      map<node_set, double>& x_s)
 {
     LOG_SCOPE_F(INFO, "Solver.");
+
     GRBModel model(_env);
     model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
 
     // each vertex has a weight
-    // BUG cuidado, haverá vars não incializadas
     vector<GRBVar> vars(g.get_n());
     for_nodes(g, n) {
         vars[n] = model.addVar(
@@ -63,42 +63,53 @@ double Solver::solve(const Graph& g,
 
     model.update();
 
+    vector<bool> is_used(g.get_n(), false);
+
     // sum of weights of nodes in an independent set <= 1
     map<node_set, GRBConstr> constrs;
     for (const node_set& set : indep_sets) {
-        CHECK_F(!set.empty(), "Empty set in the list.");
+        DCHECK_F(!set.empty(), "Empty set in the list.");
+
         GRBLinExpr c = 0;
         for (node n : set) {
-            CHECK_F(g.is_active(n), "node is not active.");
+            DCHECK_F(g.is_active(n), "node is not active.");
             c += vars[n];
+            is_used[n] = true;
         }
+
         constrs[set] = model.addConstr(c <= 1.0);
     }
 
+    // BUG atualmente, existem momentos no qual, ao desfazer contracts, os nós
+    // que retornam podem não serem cobertos por nenhum conjunto independente.
+    // Isso faz com que o modelo seja inviável
+    for_nodes(g, u) {
+        if (!is_used[u]) {
+            add_constrain(model, vars, constrs, indep_sets, {u});
+        }
+    }
+
     LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
-    // for (const node_set& set : indep_sets) {
-    //     LOG_F(INFO, "Set %s", to_string(set).c_str());
-    // }
 
     vector<double> weight(g.get_n());
     while (true) {
         model.optimize();
+        LOG_F(INFO, "Solved with value %lf", model.get(GRB_DoubleAttr_ObjVal));
 
         // get the weights of the nodes
         for_nodes(g, n) {
             weight[n] = vars[n].get(GRB_DoubleAttr_X);
         }
 
-        node_set set = Pricing::solve(g, weight);
+        vector<node_set> sets = Pricing::solve(g, weight);
 
-        if (set.empty()) {
-            LOG_F(INFO,
-                  "New set is empty. Stopping with %ld sets.",
-                  indep_sets.size());
+        if (sets.empty()) {
             break;
         }
 
-        add_constrain(model, vars, constrs, indep_sets, set);
+        for (const node_set& set : sets) {
+            add_constrain(model, vars, constrs, indep_sets, set);
+        }
     }
 
     // for each constrain, get its shadow price and save
