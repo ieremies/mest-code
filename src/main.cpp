@@ -100,7 +100,6 @@ int main(int argc, char** argv)
         sol = Solver().solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
 
-            }
         if (integral(x_s) and sol + EPS < upper_bound) {
             upper_bound = sol;
             log_solution(*g, x_s, sol);
