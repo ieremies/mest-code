@@ -4,7 +4,7 @@ HOMEDIR  = .
 PLATFORM = linux64
 CC       = g++
 CC_WARN  = -Wall -Wextra -Wpedantic -Wshadow -Weffc++
-CC_ARGS  = -march=native -std=c++17 $(CC_WARN)
+CC_ARGS  = -march=native -std=c++17
 CC_LIB   = -lm -lpthread -ldl
 
 # All is the debug version
@@ -62,10 +62,10 @@ $(HOMEDIR_OBJ)/loguro.o: $(LOGURU_DIR)/loguru.cpp
 	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
 
 $(HOMEDIR_BIN)/%.e: $(HOMEDIR_OBJ)/%.o $(_OBJ)
-	$(CC) $(CC_ARGS) $^ -o $@ $(LIB) $(INC)
+	$(CC) $(CC_ARGS) $(CC_WARN) $^ -o $@ $(LIB) $(INC)
 
 $(HOMEDIR_OBJ)/%.o: $(HOMEDIR_SRC)/%.cpp
-	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
+	$(CC) $(CC_ARGS) $(CC_WARN) -c $^ -o $@ $(INC)
 
 # Remove all objects and executables
 # except loguru.o
