@@ -7,7 +7,6 @@
 
 #include "../incl/pricing.hpp"
 #include "../incl/utils.hpp"
-#include "../lib/loguru.hpp"
 
 Solver::Solver()
     : _env(true)

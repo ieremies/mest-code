@@ -3,7 +3,6 @@
 #include "../incl/heuristic.hpp"
 
 #include "../incl/utils.hpp"
-#include "../lib/loguru.hpp"
 
 cost dsatur(const Graph& graph, vector<node_set>& indep_sets)
 {

@@ -5,6 +5,16 @@
 #include <set>
 #include <string>
 
+#define LOGURU_SCOPE_TIME_PRECISION 9
+#define LOGURU_FILENAME_WIDTH 15
+#ifdef NDEBUG
+#    define LOGURU_VERBOSE loguru::Verbosity_WARNING
+#else
+#    define LOGURU_VERBOSE loguru::Verbosity_MAX
+#endif
+
+#include <loguru.hpp>
+
 #include "../incl/graph.hpp"
 
 #define EPS 1e-9

@@ -5,20 +5,12 @@
 #include <string>
 #include <vector>
 
-#define LOGURU_SCOPE_TIME_PRECISION 9
-#ifdef NDEBUG
-#    define LOGURU_VERBOSE loguru::Verbosity_WARNING
-#else
-#    define LOGURU_VERBOSE loguru::Verbosity_MAX
-#endif
-
 #include "../incl/branch.hpp"
 #include "../incl/graph.hpp"
 #include "../incl/heuristic.hpp"
 #include "../incl/pricing.hpp"
 #include "../incl/solver.hpp"
 #include "../incl/utils.hpp"
-#include "../lib/loguru.hpp"
 
 // Start counting time limit
 const chrono::seconds time_limit(TIMELIMIT);
@@ -59,7 +51,12 @@ Graph* read_dimacs_instance(const string& filename)
         int v;
         getline(infile, line);
         (void)sscanf(line.c_str(), "e %d %d", &u, &v);
-        g->add_edge(u - 1, v - 1);
+        // if filename ends with .col, then the vertices are numbered from 1
+        if (filename.substr(filename.size() - 4) == ".col") {
+            g->add_edge(u - 1, v - 1);
+        } else {
+            g->add_edge(u, v);
+        }
     }
     LOG_F(INFO,
           "Read instance with %d vertexes and %lu edges",
@@ -84,10 +81,12 @@ int main(int argc, char** argv)
     // Logging config
     loguru::g_preamble_date = false;
     loguru::g_preamble_thread = false;
+    loguru::g_preamble_time = false;
     loguru::init(argc, argv);
     loguru::add_file("log.log", loguru::FileMode::Truncate, LOGURU_VERBOSE);
 
     // Read the instance and create the graph
+    LOG_F(INFO, "Aaaaa");
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;

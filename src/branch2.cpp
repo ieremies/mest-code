@@ -4,7 +4,6 @@
 #include "../incl/branch.hpp"
 
 #include "../incl/utils.hpp"
-#include "../lib/loguru.hpp"
 
 pair<node, node> find_vertexes(const Graph& g,
                                const vector<node_set>& indep_set,

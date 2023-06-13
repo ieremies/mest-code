@@ -3,7 +3,6 @@
 #include <gurobi_c++.h>
 
 #include "../incl/utils.hpp"
-#include "../lib/loguru.hpp"
 
 // maximize     x_v weight_v
 // subjected to x_v + x_w <= 1 for all edges (v,w)

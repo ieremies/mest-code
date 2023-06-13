@@ -2,7 +2,7 @@
 
 #include "../incl/graph.hpp"
 
-#include "../lib/loguru.hpp"
+#include "../incl/utils.hpp"
 
 // ==================== Graph ====================
 Graph::Graph(int nnodes)
