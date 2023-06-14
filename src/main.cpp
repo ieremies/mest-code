@@ -16,19 +16,15 @@
 const chrono::seconds time_limit(TIMELIMIT);
 const auto start_time = chrono::steady_clock::now();
 
+// TODO time_limit não é obedecido fora da main
 bool check_time()
 {
-    // check time limit
     const auto current_time = chrono::steady_clock::now();
     const auto elapsed_time =
         chrono::duration_cast<chrono::seconds>(current_time - start_time);
     return elapsed_time > time_limit;
 }
 
-/*
-** Function to read a DIMACS instanc from file (filename) and
-** create the Graph g.
-*/
 Graph* read_dimacs_instance(const string& filename)
 {
     ifstream infile(filename);
@@ -65,17 +61,6 @@ Graph* read_dimacs_instance(const string& filename)
     return g;
 }
 
-bool integral(const map<node_set, double>& x_s)
-{
-    for (const auto& [s, x] : x_s) {
-        if (0 + EPS < x and x < 1 - EPS) {
-            LOG_F(INFO, "not integer %f", x);
-            return false;
-        }
-    }
-    return true;
-}
-
 int main(int argc, char** argv)
 {
     // Logging config
@@ -86,7 +71,6 @@ int main(int argc, char** argv)
     loguru::add_file("log.log", loguru::FileMode::Truncate, LOGURU_VERBOSE);
 
     // Read the instance and create the graph
-    LOG_F(INFO, "Aaaaa");
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;
@@ -113,7 +97,7 @@ int main(int argc, char** argv)
 
     } while (!indep_sets.empty() and !check_time());
 
-    LOG_F(WARNING, "Timed out?: %d", check_time());
+    LOG_IF_F(WARNING, check_time(), "Timed out!");
     LOG_F(WARNING, "Upper bound: %Lf", upper_bound);
 
     delete g;

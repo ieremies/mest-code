@@ -62,6 +62,9 @@ double Solver::solve(const Graph& g,
 
     model.update();
 
+    // BUG atualmente, existem momentos no qual, ao desfazer contracts, os nós
+    // que retornam podem não serem cobertos por nenhum conjunto independente.
+    // Isso faz com que o modelo seja inviável
     vector<bool> is_used(g.get_n(), false);
 
     // sum of weights of nodes in an independent set <= 1
@@ -79,9 +82,6 @@ double Solver::solve(const Graph& g,
         constrs[set] = model.addConstr(c <= 1.0);
     }
 
-    // BUG atualmente, existem momentos no qual, ao desfazer contracts, os nós
-    // que retornam podem não serem cobertos por nenhum conjunto independente.
-    // Isso faz com que o modelo seja inviável
     for_nodes(g, u) {
         if (!is_used[u]) {
             add_constrain(model, vars, constrs, indep_sets, {u});
@@ -93,14 +93,17 @@ double Solver::solve(const Graph& g,
     vector<double> weight(g.get_n());
     while (true) {
         model.optimize();
-        LOG_F(INFO, "Solved with value %lf", model.get(GRB_DoubleAttr_ObjVal));
+        LOG_F(INFO,
+              "Solved in %lf with value %lf",
+              model.get(GRB_DoubleAttr_Runtime),
+              model.get(GRB_DoubleAttr_ObjVal));
 
         // get the weights of the nodes
         for_nodes(g, n) {
             weight[n] = vars[n].get(GRB_DoubleAttr_X);
         }
 
-        vector<node_set> sets = Pricing::solve(g, weight);
+        vector<node_set> sets = pricing::solve(g, weight);
 
         if (sets.empty()) {
             break;
@@ -116,7 +119,7 @@ double Solver::solve(const Graph& g,
     // for each constrain, get its shadow price and save
     // it as the correspondent x_s
     for (const node_set& set : indep_sets) {
-        x_s[set] = constrs[set].get(GRB_DoubleAttr_Pi);
+        x_s[set] = EPS * (constrs[set].get(GRB_DoubleAttr_Pi) / EPS);
     }
 
     // Return the dual objective solution

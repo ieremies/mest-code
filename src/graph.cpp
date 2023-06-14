@@ -41,7 +41,7 @@ Graph::node Graph::get_degree(node u) const
     if (not is_active(u)) {
         return 0;
     }
-    CHECK_F(deg[u] == check_deg(u), "Degree is not consistent.");
+    DCHECK_F(deg[u] == check_deg(u), "Degree is not consistent.");
     return deg[u];
 }
 
@@ -55,10 +55,10 @@ Graph::node Graph::get_incidency(node u, node v) const
     if (not is_active(u) or not is_active(v)) {
         return 0;
     }
-    CHECK_F(inc[u][v] == inc[v][u],
-            "Incidency of %d %d (active) nodes are not mirrowed.",
-            u,
-            v);
+    DCHECK_F(inc[u][v] == inc[v][u],
+             "Incidency of %d %d (active) nodes are not mirrowed.",
+             u,
+             v);
     return inc[u][v];
 }
 
@@ -150,7 +150,8 @@ void Graph::undo(mod_type tc, node uc, node vc)
 
 unsigned long int Graph::add_edge(node u, node v)
 {
-    CHECK_F(active[u] && active[v], "Interacting with inactive nodes");
+    CHECK_F(
+        active[u] && active[v], "Interacting with inactive nodes %d %d", u, v);
     CHECK_F(u != v, "Cannoct act with equal nodes.");
 
     if (inc[u][v]++ == 0) {
@@ -215,15 +216,21 @@ void Graph::log() const
     }
 }
 
-void Graph::log_changes() const
+void Graph::apply_changes_to_sol(vector<node_set>& indep_sets) const
 {
-    string log = "Contracts: ";
-    for (auto [t, u, v] : delta) {
-        if (t == mod_type::contract) {
-            log += "(" + to_string(u) + "," + to_string(v) + ") ";
+    // iterate over delta in reverse order
+    for (auto it = delta.rbegin(); it != delta.rend(); ++it) {
+        auto [t, u, v] = *it;
+        if (t != mod_type::contract) {
+            continue;
+        }
+        for (auto set : indep_sets) {
+            if (set.find(v) != set.end()) {
+                set.erase(v);
+                break;
+            }
         }
     }
-    LOG_F(WARNING, "%s", log.c_str());
 }
 
 Graph::node Graph::first_adj_node(node u) const

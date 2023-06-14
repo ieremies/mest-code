@@ -7,7 +7,7 @@
 // maximize     x_v weight_v
 // subjected to x_v + x_w <= 1 for all edges (v,w)
 //              x_v binary for all nodes v
-vector<node_set> Pricing::solve(const Graph& g, const vector<double>& weight)
+vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
 
@@ -19,6 +19,7 @@ vector<node_set> Pricing::solve(const Graph& g, const vector<double>& weight)
     }
     env.start();
 
+    // Maximize model.
     GRBModel pricing_model(env);
     pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
 
@@ -32,19 +33,23 @@ vector<node_set> Pricing::solve(const Graph& g, const vector<double>& weight)
     pricing_model.update();
 
     // No adjacent nodes in g are both selected.
-    for_nodes(g, n1)
-        for_nodes(g, n2)
+    for_nodes(g, n1) {
+        for_nodes(g, n2) {
             if (g.get_incidency(n1, n2) > 0) {
                 pricing_model.addConstr(
                     x[n1] + x[n2] <= 1,
                     "edge " + to_string(n1) + " " + to_string(n2));
             }
+        }
+    }
 
     pricing_model.optimize();
 
     vector<node_set> sets = {};
 
+    // While we can find a set with weight > 1.
     while (pricing_model.get(GRB_DoubleAttr_ObjVal) >= 1 + EPS) {
+        // Retrive the found set.
         node_set set;
         for_nodes(g, n) {
             if (x[n].get(GRB_DoubleAttr_X) > 0.5) {
@@ -58,7 +63,7 @@ vector<node_set> Pricing::solve(const Graph& g, const vector<double>& weight)
 
         sets.push_back(set);
 
-        // remove element with max weight
+        // element with max weight in the set chosen
         double max_weight = -1;
         int max_weight_node = -1;
         for (node n : set) {
@@ -67,9 +72,9 @@ vector<node_set> Pricing::solve(const Graph& g, const vector<double>& weight)
                 max_weight_node = n;
             }
         }
+        // Remove it and solve again.
         pricing_model.addConstr(x[max_weight_node] == 0,
                                 "remove " + to_string(max_weight_node));
-
         pricing_model.optimize();
     }
 

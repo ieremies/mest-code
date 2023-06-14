@@ -5,10 +5,9 @@
 
 #include "utils.hpp"
 
-class Pricing
+namespace pricing
 {
-  public:
-    static vector<node_set> solve(const Graph&, const vector<double>&);
-};
+vector<node_set> solve(const Graph&, const vector<double>&);
+}  // namespace pricing
 
 #endif

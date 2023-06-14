@@ -48,6 +48,7 @@ Atualmente fazemos isso pegando o par de nós que estamos "mais em dúvida".
 Ter dúvida entre colocar o par u v no mesmo conjunto se manifesta em ele aparecer em conjuntos com valores próximos de 0.5
 duvida[u,v] += 0.5 - abs(0.5 - x_s[set]) para set in indep_sets
 # TODO conferir com a literatura de binpacking
+*
 
 * Instances
 All the instances used are under the folder =inst=. The subfolder are used to specify where they were obtained:

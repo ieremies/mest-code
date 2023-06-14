@@ -1,6 +1,7 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
+#include <set>
 #include <stack>
 #include <string>
 #include <utility>
@@ -61,7 +62,7 @@ class Graph
     node next_adj_node(node, node) const;
 
     void log() const;
-    void log_changes() const;
+    void apply_changes_to_sol(vector<set<Graph::node>>&) const;
 
   private:
     node n;
@@ -79,4 +80,7 @@ class Graph
     node check_deg(node) const;
 };
 
+using node_set = set<Graph::node>;
+using node = Graph::node;
+using edge = Graph::edge;
 #endif

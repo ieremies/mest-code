@@ -18,12 +18,27 @@ void log_solution(const Graph& g,
                   const map<node_set, double>& x_s,
                   const double& sol)
 {
-    string log = "SOL: %f = ";
-    for (auto& [s, x] : x_s) {
+    vector<node_set> indep_sets;
+    for (const auto& [s, x] : x_s) {
         if (x >= 1 - EPS) {
-            log += to_string(s) + " ";
+            indep_sets.push_back(s);
         }
     }
+    g.apply_changes_to_sol(indep_sets);
+    string log = "SOL: %f = ";
+    for (const auto& s : indep_sets) {
+        log += to_string(s) + " ";
+    }
     LOG_F(WARNING, log.c_str(), sol);
-    g.log_changes();
+}
+
+bool integral(const map<node_set, double>& x_s)
+{
+    for (const auto& [s, x] : x_s) {
+        if (0 + EPS < x and x < 1 - EPS) {
+            LOG_F(INFO, "not integer %f", x);
+            return false;
+        }
+    }
+    return true;
 }
