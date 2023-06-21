@@ -1,10 +1,12 @@
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "../incl/solver.hpp"
 
 #include <gurobi_c++.h>
 
+#include "../incl/grb_env.hpp"
 #include "../incl/pricing.hpp"
 #include "../incl/utils.hpp"
 
@@ -119,7 +121,7 @@ double Solver::solve(const Graph& g,
     // for each constrain, get its shadow price and save
     // it as the correspondent x_s
     for (const node_set& set : indep_sets) {
-        x_s[set] = EPS * (constrs[set].get(GRB_DoubleAttr_Pi) / EPS);
+        x_s[set] = EPS * floor((constrs[set].get(GRB_DoubleAttr_Pi) / EPS));
     }
 
     // Return the dual objective solution
