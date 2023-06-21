@@ -6,7 +6,6 @@
 
 #include <gurobi_c++.h>
 
-#include "../incl/grb_env.hpp"
 #include "../incl/pricing.hpp"
 #include "../incl/utils.hpp"
 
