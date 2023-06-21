@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -61,6 +62,67 @@ Graph* read_dimacs_instance(const string& filename)
     return g;
 }
 
+void maximal_set(const Graph& g, node_set& s)
+{
+    vector<bool> visited(g.get_n(), false);
+    for (const auto& v : s) {
+        visited[v] = true;
+        for_adj(g, v, n) {
+            visited[n] = true;
+        }
+    }
+    // while some one is not visited
+    // get the one with the least degree
+    // add to the set and mark him and its neighbors as visited
+    while (find(visited.begin(), visited.end(), false) != visited.end()) {
+        int min_degree = g.get_n();
+        int min_v = -1;
+        for (int v = 0; v < g.get_n(); v++) {
+            if (visited[v]) {
+                continue;
+            }
+            if (g.get_degree(v) < min_degree) {
+                min_degree = g.get_degree(v);
+                min_v = v;
+            }
+        }
+        s.insert(min_v);
+        visited[min_v] = true;
+        for_adj(g, min_v, n) {
+            visited[n] = true;
+        }
+    }
+}
+
+void enrich(const Graph& g, vector<node_set>& indep_sets)
+{
+    for_nodes(g, u) {
+        // testei a ideia de criar os conjuntos maximais a partir
+        // de pares não conectados, mas não parece ser muito bom não...
+        for_nodes(g, v) {
+            if (g.get_incidency(u, v) == 0) {
+                continue;
+            }
+            node_set s = {u, v};
+            maximal_set(g, s);
+            indep_sets.push_back(s);
+        }
+    }
+    // vector<node_set> new_indep_sets;
+    // for (auto& s : indep_sets) {
+    //     if (s.size() == 1) {
+    //         continue;
+    //     }
+    //     for (auto& v : s) {
+    //         node_set s_copy = s;
+    //         // remove v from s_copy
+    //         s_copy.erase(v);
+    //         new_indep_sets.push_back(s_copy);
+    //     }
+    // }
+    // indep_sets.insert(
+    //     indep_sets.end(), new_indep_sets.begin(), new_indep_sets.end());
+}
 int main(int argc, char** argv)
 {
     // Logging config
@@ -75,6 +137,7 @@ int main(int argc, char** argv)
 
     vector<node_set> indep_sets;
     cost upper_bound = dsatur(*g, indep_sets);
+    enrich(*g, indep_sets);
 
     cost sol = 0;
     map<node_set, double> x_s;  // x[s] = 1 if s is in the solution
@@ -83,7 +146,7 @@ int main(int argc, char** argv)
 
     do {
         x_s.clear();
-        sol = Solver().solve(*g, indep_sets, x_s);
+        sol = Solver::get_instance().solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
 
         if (integral(x_s) and sol + EPS < upper_bound) {

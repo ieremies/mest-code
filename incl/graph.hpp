@@ -71,6 +71,7 @@ class Graph
     vector<node> deg;
     vector<bool> active;
     // BUG For some instances, this can be not enough
+    // FIXME não é matriz de incidência
     vector<vector<node>> inc;
 
     void do_conflict(node, node);
