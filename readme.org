@@ -1,3 +1,4 @@
+#+Title: My Master's Code
 Pricing is responsible for solving to optimal.
 Branchins is the one aiming for feasability.
 Once we find a feasible, that's a upper bound.
