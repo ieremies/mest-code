@@ -47,7 +47,7 @@ INC = $(GUROBI_INC) $(LEMON_INC) -I$(HOMEDIR_INC) $(LOGURU_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) $(LEMON_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
-_SR = pricing.cpp solver.cpp utils.cpp branch2.cpp graph.cpp heuristic.cpp
+_SR = pricing.cpp solver.cpp utils.cpp branch.cpp graph.cpp heuristic.cpp
 _OB = $(_SR:.cpp=.o) loguro.o # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 
