@@ -22,6 +22,9 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     // Maximize model.
     GRBModel pricing_model(env);
     pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
+    // TODO Get multiple solutions.
+    // pricing_model.set(GRB_IntParam_SolutionLimit, 16 * g.get_n());
+    // pricing_model.set(GRB_IntParam_PoolSearchMode, 0);
 
     // x_v is 1 if v is selected, 0 otherwise.
     vector<GRBVar> x(g.get_n());
