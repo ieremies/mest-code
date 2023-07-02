@@ -52,7 +52,7 @@ bool Graph::is_active(node u) const
 
 Graph::node Graph::get_incidency(node u, node v) const
 {
-    if (not is_active(u) or not is_active(v)) {
+    if (not is_active(u) or not is_active(v) or u == v) {
         return 0;
     }
     DCHECK_F(inc[u][v] == inc[v][u],

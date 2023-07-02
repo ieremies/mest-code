@@ -56,3 +56,9 @@ All the instances used are under the folder =inst=. The subfolder are used to sp
 - =cmu= https://mat.tepper.cmu.edu/COLOR/instances.html
 - =hugo= https://www.cs.upc.edu/~hhernandez/graphcoloring/home.html
 - =cedric= http://cedric.cnam.fr/~porumbed/graphs/
+
+* About maximal independent sets
+We only care about maximal (insertion-wise) independent sets.
+If we find a feasible solution with only maximal independent sets, it may have some vertices in more then one set.
+We can obtain a solution without that fact heuristically and keeping the number of sets.
+When making sure no set violates the constrains in the dual program, we can be sure that if no maximal independent set can, so does every other independent set.

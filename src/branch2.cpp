@@ -88,10 +88,8 @@ bool check_indep(const Graph& g, const vector<node_set>& indep_sets)
     for (const node_set& set : indep_sets) {
         for (node u : set) {
             for (node v : set) {
-                if (u != v
-                    and (not g.is_active(u) or not g.is_active(v)
-                         or g.get_incidency(u, v) != 0))
-                {
+                if (g.get_incidency(u, v) != 0) {
+                    LOG_F(ERROR, "%d %d are not independent", u, v);
                     return false;
                 }
             }
