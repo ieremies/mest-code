@@ -15,9 +15,9 @@ release: CC_ARGS += -O3 -DNDEBUG
 release: executable
 
 #================ LEMON =======================================================
-LEMON_DIR = /usr/local
-LEMON_INC = -isystem$(LEMON_DIR)/include/lemon
-LEMON_LIB = -L$(LEMON_DIR)/lib -lemon
+# LEMON_DIR = /usr/local
+# LEMON_INC = -isystem$(LEMON_DIR)/include/lemon
+# LEMON_LIB = -L$(LEMON_DIR)/lib -lemon
 
 #================= GUROBI =====================================================
 GUROBI_DIR = /opt/gurobi1000/linux64

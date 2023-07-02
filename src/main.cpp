@@ -99,14 +99,9 @@ void enrich(const Graph& g, vector<node_set>& indep_sets)
     for_nodes(g, u) {
         // testei a ideia de criar os conjuntos maximais a partir
         // de pares não conectados, mas não parece ser muito bom não...
-        for_nodes(g, v) {
-            if (g.get_incidency(u, v) == 0) {
-                continue;
-            }
-            node_set s = {u, v};
-            maximal_set(g, s);
-            indep_sets.push_back(s);
-        }
+        node_set s = {u};
+        maximal_set(g, s);
+        indep_sets.push_back(s);
     }
     // vector<node_set> new_indep_sets;
     // for (auto& s : indep_sets) {
