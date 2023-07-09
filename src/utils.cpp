@@ -1,7 +1,5 @@
 #include "../incl/utils.hpp"
 
-#include "../lib/loguru.hpp"
-
 string to_string(const node_set& set)
 {
     string s = "{";
