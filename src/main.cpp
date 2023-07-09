@@ -108,13 +108,15 @@ int main(int argc, char** argv)
     loguru::g_preamble_time = false;
     loguru::g_stderr_verbosity = 0;
     loguru::init(argc, argv);
-    loguru::add_file("log.log", loguru::FileMode::Truncate, LOGURU_VERBOSE);
+    loguru::add_file(
+        "log.log", loguru::FileMode::Truncate, loguru::Verbosity_INFO);
 
     // Read the instance and create the graph
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;
     cost upper_bound = dsatur(*g, indep_sets);
+    cost lower_bound = 0;
     enrich(*g, indep_sets);
 
     cost sol = 0;
@@ -126,6 +128,13 @@ int main(int argc, char** argv)
         x_s.clear();
         sol = Solver::get_instance().solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
+
+        if (lower_bound == 0) {
+            lower_bound = sol;
+            if (lower_bound + 1 > upper_bound) {
+                break;
+            }
+        }
 
         if (integral(x_s) and sol + EPS < upper_bound) {
             upper_bound = sol;
