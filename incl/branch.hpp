@@ -23,9 +23,7 @@ class Branch
         vector<node_set> indep_sets;
     };
     Branch()
-        : tree()
-    {
-    }
+        : tree() {};
 
   private:
     stack<Branch::node> tree;

@@ -41,7 +41,7 @@ Graph::node Graph::get_degree(node u) const
     if (not is_active(u)) {
         return 0;
     }
-    DCHECK_F(deg[u] == check_deg(u), "Degree is not consistent.");
+    DCHECK_F(deg[u] == check_deg(u), "Degree is not consistent (%d).", u);
     return deg[u];
 }
 

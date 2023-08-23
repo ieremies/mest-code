@@ -19,6 +19,18 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     }
     env.start();
 
+    double lower_bound = 0;
+    for_nodes(g, n) {
+        double dom = weight[n];
+        for_adj(g, n, u) {
+            if (n != u) {
+                dom += weight[u];
+            }
+        }
+        lower_bound = weight[n] * weight[n] / dom;
+    }
+    LOG_F(INFO, "Lower bound: %f", lower_bound);
+
     // Maximize model.
     GRBModel pricing_model(env);
     pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
