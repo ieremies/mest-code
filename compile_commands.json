@@ -2,25 +2,51 @@
   {
     "arguments": [
       "/usr/bin/g++",
-      "-g",
       "-march=native",
       "-std=c++17",
+      "-g",
+      "-Werror",
+      "-Og",
       "-Wall",
       "-Wextra",
-      "-pedantic",
+      "-Wpedantic",
       "-Wshadow",
       "-Weffc++",
       "-c",
-      "-isystem/opt/gurobi1000/linux64/include",
-      "-I/usr/local/include/lemon",
+      "-isystem/Library/gurobi1002/macos_universal2/include",
+      "-I./lib",
       "-I./incl",
-      "-I./lib/",
       "-o",
-      "obj/solver.o",
-      "src/solver.cpp"
+      "obj/main.o",
+      "src/main.cpp"
     ],
-    "directory": "/home/ieremies/proj/mest/code",
-    "file": "/home/ieremies/proj/mest/code/src/solver.cpp",
-    "output": "/home/ieremies/proj/mest/code/obj/solver.o"
+    "directory": "/Users/ieremies/mest/code",
+    "file": "/Users/ieremies/mest/code/src/main.cpp",
+    "output": "/Users/ieremies/mest/code/obj/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-march=native",
+      "-std=c++17",
+      "-g",
+      "-Werror",
+      "-Og",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Wshadow",
+      "-Weffc++",
+      "-c",
+      "-isystem/Library/gurobi1002/macos_universal2/include",
+      "-I./lib",
+      "-I./incl",
+      "-o",
+      "obj/heu_test.o",
+      "src/heu_test.cpp"
+    ],
+    "directory": "/Users/ieremies/mest/code",
+    "file": "/Users/ieremies/mest/code/src/heu_test.cpp",
+    "output": "/Users/ieremies/mest/code/obj/heu_test.o"
   }
 ]

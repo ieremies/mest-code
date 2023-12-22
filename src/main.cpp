@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;
-    cost upper_bound = dsatur(*g, indep_sets);
+    cost upper_bound = heuristic(*g, indep_sets);
     cost lower_bound = 0;
     enrich(*g, indep_sets);
 

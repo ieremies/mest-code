@@ -14,7 +14,7 @@ Checks: "*,\
   -misc-non-private-member-variables-in-classes,\
   -cppcoreguidelines-pro-type-vararg,\
   -modernize-use-trailing-return-type,\
-  -readability-identifier-lenght,\
+  -readability-identifier-length,\
   -hicpp-vararg"
 WarningsAsErrors: ''
 CheckOptions:

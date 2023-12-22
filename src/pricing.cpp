@@ -50,7 +50,7 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     // No adjacent nodes in g are both selected.
     for_nodes(g, n1) {
         for_nodes(g, n2) {
-            if (g.get_incidency(n1, n2) > 0) {
+            if (g.get_adjacency(n1, n2) > 0) {
                 pricing_model.addConstr(
                     x[n1] + x[n2] <= 1,
                     "edge " + to_string(n1) + " " + to_string(n2));
