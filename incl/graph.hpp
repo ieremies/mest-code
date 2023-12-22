@@ -17,14 +17,11 @@
     for (node n = G.first_adj_node(u); n < G.get_n(); n = G.next_adj_node(u, n))
 
 using namespace std;
-/*
-** Conflict: add an edge between u and v
-** Contract: all edges of v are added to u and v is deactivated
-*/
+
 enum class mod_type
 {
-    conflict,
-    contract
+    conflict,  // add an edge between u and v
+    contract  // all edges of v are added to u and v is deactivated
 };
 
 class Graph
@@ -53,13 +50,16 @@ class Graph
 
     unsigned long int add_edge(node, node);
     unsigned long int remove_edge(node, node);
-    node get_incidency(node, node) const;
+    node get_adjacency(node, node) const;
 
     node first_act_node() const;
     node next_act_node(node) const;
 
     node first_adj_node(node) const;
     node next_adj_node(node, node) const;
+
+    edge first_edge() const;
+    edge next_edge(edge) const;
 
     void log() const;
     void apply_changes_to_sol(vector<set<Graph::node>>&) const;
@@ -71,8 +71,7 @@ class Graph
     vector<node> deg;
     vector<bool> active;
     // BUG For some instances, this can be not enough
-    // FIXME não é matriz de incidência
-    vector<vector<node>> inc;
+    vector<vector<node>> adj;
 
     void do_conflict(node, node);
     void undo_conflict(node, node);

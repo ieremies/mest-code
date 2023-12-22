@@ -31,7 +31,7 @@ pair<node, node> find_vertexes(const Graph& g,
     node v = 0;
     for_nodes(g, _u)
         for_nodes(g, _v)
-            if (max < diff[_u][_v] and g.get_incidency(_u, _v) == 0) {
+            if (max < diff[_u][_v] and g.get_adjacency(_u, _v) == 0) {
                 max = diff[_u][_v];
                 u = _u;
                 v = _v;
@@ -86,9 +86,9 @@ vector<node_set> clean_sets(const mod_type& t,
 bool check_indep(const Graph& g, const vector<node_set>& indep_sets)
 {
     for (const node_set& set : indep_sets) {
-        for (node u : set) {
-            for (node v : set) {
-                if (g.get_incidency(u, v) != 0) {
+        for (node const u : set) {
+            for (node const v : set) {
+                if (g.get_adjacency(u, v) != 0) {
                     LOG_F(ERROR, "%d %d are not independent", u, v);
                     return false;
                 }

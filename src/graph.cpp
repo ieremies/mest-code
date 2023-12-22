@@ -11,7 +11,7 @@ Graph::Graph(int nnodes)
     , delta()
     , deg(n, 0)
     , active(n, true)
-    , inc(n, vector<node>(n, 0))
+    , adj(n, vector<node>(n, 0))
 {
 }
 
@@ -29,7 +29,7 @@ Graph::node Graph::check_deg(node u) const
 {
     node count = 0;
     for (node v = 0; v < get_n(); v++) {
-        if (get_incidency(u, v) > 0) {
+        if (get_adjacency(u, v) > 0) {
             count++;
         }
     }
@@ -50,16 +50,20 @@ bool Graph::is_active(node u) const
     return active[u];
 }
 
-Graph::node Graph::get_incidency(node u, node v) const
+Graph::node Graph::get_adjacency(node u, node v) const
 {
     if (not is_active(u) or not is_active(v) or u == v) {
         return 0;
     }
-    DCHECK_F(inc[u][v] == inc[v][u],
-             "Incidency of %d %d (active) nodes are not mirrowed.",
-             u,
-             v);
-    return inc[u][v];
+    DCHECK_F(
+        adj[u][v] == adj[v][u],
+        "Adjacency of %d %d (active) nodes are not mirrowed (%d | %d).\n%s",
+        u,
+        v,
+        adj[u][v],
+        adj[v][u],
+        loguru::stacktrace().c_str());
+    return adj[u][v];
 }
 
 void Graph::do_conflict(node u, node v)
@@ -78,20 +82,20 @@ void Graph::do_contract(node u, node v)
 {
     LOG_F(INFO, "Doing contract %d %d.", u, v);
     for (node n1 = 0; n1 < n; n1++) {
-        if (get_incidency(v, n1) == 0) {
+        if (get_adjacency(v, n1) == 0) {
             continue;
         }
 
-        if (inc[u][n1] == 0) {
+        if (adj[u][n1] == 0) {
             deg[u]++;
         }
-        if (inc[n1][v] > 0) {
+        if (adj[n1][v] > 0) {
             deg[u]--;
         }
-        inc[u][n1] += inc[n1][v];
-        inc[n1][u] += inc[n1][v];
-        inc[n1][v] = 0;
-        inc[u][v] = 0;
+        adj[u][n1] += adj[n1][v];
+        adj[n1][u] += adj[n1][v];
+        adj[n1][v] = 0;
+        adj[u][v] = 0;
     }
     active[v] = false;
 }
@@ -101,19 +105,19 @@ void Graph::undo_contract(node u, node v)
     LOG_F(INFO, "Undoing contract %d %d.", u, v);
     active[v] = true;
     for (node n1 = 0; n1 < n; n1++) {
-        if (not is_active(n1) or inc[v][n1] == 0) {
+        if (not is_active(n1) or adj[v][n1] == 0) {
             continue;
         }
-        if (inc[u][n1] == inc[v][n1]) {
+        if (adj[u][n1] == adj[v][n1]) {
             deg[u]--;
         }
-        if (inc[n1][v] == 0) {
+        if (adj[n1][v] == 0) {
             deg[u]++;
         }
-        inc[u][n1] -= inc[v][n1];
-        inc[n1][u] -= inc[v][n1];
-        inc[n1][v] = inc[v][n1];
-        inc[u][v] = inc[v][u];
+        adj[u][n1] -= adj[v][n1];
+        adj[n1][u] -= adj[v][n1];
+        adj[n1][v] = adj[v][n1];
+        adj[u][v] = adj[v][u];
     }
 }
 
@@ -154,10 +158,10 @@ unsigned long int Graph::add_edge(node u, node v)
         active[u] && active[v], "Interacting with inactive nodes %d %d", u, v);
     CHECK_F(u != v, "Cannoct act with equal nodes.");
 
-    if (inc[u][v]++ == 0) {
+    if (adj[u][v]++ == 0) {
         deg[u]++;
     }
-    if (inc[v][u]++ == 0) {
+    if (adj[v][u]++ == 0) {
         deg[v]++;
     }
     m++;
@@ -169,12 +173,12 @@ unsigned long int Graph::remove_edge(node u, node v)
 {
     CHECK_F(active[u] && active[v], "Interacting with inactive nodes");
     CHECK_F(u != v, "Cannoct act with equal nodes.");
-    CHECK_F(inc[u][v] > 0, "Edge does not exists.");
+    CHECK_F(adj[u][v] > 0, "Edge does not exists.");
 
-    if (--inc[u][v] == 0) {
+    if (--adj[u][v] == 0) {
         deg[u]--;
     }
-    if (--inc[v][u] == 0) {
+    if (--adj[v][u] == 0) {
         deg[v]--;
     }
     m--;
@@ -209,8 +213,8 @@ void Graph::log() const
             if (!is_active(v)) {
                 continue;
             }
-            if (get_incidency(u, v) > 0) {
-                LOG_F(INFO, "     |-- %d: %d", v, inc[u][v]);
+            if (get_adjacency(u, v) > 0) {
+                LOG_F(INFO, "     |-- %d: %d", v, adj[u][v]);
             }
         }
     }
@@ -241,9 +245,26 @@ Graph::node Graph::first_adj_node(node u) const
 Graph::node Graph::next_adj_node(node u, node v) const
 {
     for (node i = v + 1; i < n; i++) {
-        if (get_incidency(u, i) > 0) {
+        if (get_adjacency(u, i) > 0) {
             return i;
         }
     }
     return n;
+}
+
+Graph::edge Graph::first_edge() const
+{
+    return next_edge({-1, -1});
+}
+
+Graph::edge Graph::next_edge(edge e) const
+{
+    for (node u = e.first; u < n; u++) {
+        for (node v = e.second + 1; v < n; v++) {
+            if (get_adjacency(u, v) > 0) {
+                return {u, v};
+            }
+        }
+    }
+    return {n, n};
 }
