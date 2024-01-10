@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <vector>
 
 #include "../incl/solver.hpp"
@@ -24,6 +25,23 @@ Solver::Solver()
         _env.set(GRB_IntParam_Threads, 1);
     }
     _env.start();
+}
+void write_mwis(const Graph& g,
+                const vector<double>& weight,
+                const string& filename)
+{
+    ofstream file(filename);
+    file << g.get_n() << " " << g.get_m() << endl;
+    for_nodes(g, n) {
+        // transform weight to integer
+        int w = (int)round(weight[n] * 214748);
+        file << w << " ";
+        for_adj(g, n, u) {
+            file << u + 1 << " ";
+        }
+        file << endl;
+    }
+    file.close();
 }
 
 void add_constrain(GRBModel& model,
@@ -92,7 +110,9 @@ double Solver::solve(const Graph& g,
     LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
 
     vector<double> weight(g.get_n());
+    int i = 0;
     while (true) {
+        i++;
         model.optimize();
         LOG_F(INFO,
               "Solved in %lf with value %lf",
@@ -104,6 +124,7 @@ double Solver::solve(const Graph& g,
             weight[n] = vars[n].get(GRB_DoubleAttr_X);
         }
 
+        write_mwis(g, weight, "mwis_" + to_string(i));
         vector<node_set> sets = pricing::solve(g, weight);
 
         if (sets.empty()) {
