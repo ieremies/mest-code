@@ -49,38 +49,6 @@ Graph* read_dimacs_instance(const string& filename)
     return g;
 }
 
-void maximal_set(const Graph& g, node_set& s)
-{
-    vector<bool> visited(g.get_n(), false);
-    for (const auto& v : s) {
-        visited[v] = true;
-        for_adj(g, v, n) {
-            visited[n] = true;
-        }
-    }
-    // while some one is not visited
-    // get the one with the least degree
-    // add to the set and mark him and its neighbors as visited
-    while (find(visited.begin(), visited.end(), false) != visited.end()) {
-        int min_degree = g.get_n();
-        int min_v = -1;
-        for (int v = 0; v < g.get_n(); v++) {
-            if (visited[v]) {
-                continue;
-            }
-            if (g.get_degree(v) < min_degree) {
-                min_degree = g.get_degree(v);
-                min_v = v;
-            }
-        }
-        s.insert(min_v);
-        visited[min_v] = true;
-        for_adj(g, min_v, n) {
-            visited[n] = true;
-        }
-    }
-}
-
 /*
 ** The idea is to create some usefull independent sets.
 ** - maximal independent set starting with each vertex
