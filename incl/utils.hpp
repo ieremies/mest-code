@@ -33,6 +33,7 @@ void log_solution(const Graph& g,
                   const map<node_set, double>& x_s,
                   const double& sol);
 bool integral(const map<node_set, double>&);
+void maximal_set(const Graph&, node_set&);
 
 inline auto to_string(const mod_type& t)
 {

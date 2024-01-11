@@ -11,24 +11,6 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
 
-    // Count number of 1 and 0 in the weight vector.
-    size_t n_1 = 0;
-    size_t n_0 = 0;
-    for (double w : weight) {
-        if (w > 1 - EPS) {
-            n_1++;
-        }
-        if (w < EPS) {
-            n_0++;
-        }
-    }
-    LOG_F(INFO,
-          "%lu nodes with weight 1, %lu nodes with weight 0, %lu with decimal "
-          "ones.",
-          n_1,
-          n_0,
-          g.get_n() - n_1 - n_0);
-
     GRBEnv env = GRBEnv(true);
     env.set(GRB_IntParam_LogToConsole, 0);
     env.set(GRB_IntParam_OutputFlag, 0);

@@ -44,23 +44,40 @@ void write_mwis(const Graph& g,
     file.close();
 }
 
-void add_constrain(GRBModel& model,
-                   const vector<GRBVar>& var,
-                   map<node_set, GRBConstr>& constrs,
-                   vector<node_set>& indep_sets,
-                   const node_set& set)
+int add_constrain(GRBModel& model,
+                  const vector<GRBVar>& var,
+                  map<node_set, GRBConstr>& constrs,
+                  vector<node_set>& indep_sets,
+                  const node_set& set)
 {
-    DCHECK_F(
-        find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
-        "The set is already in the list.");
+    if (find(indep_sets.begin(), indep_sets.end(), set) != indep_sets.end()) {
+        LOG_F(WARNING,
+              "Skipping set %s. It's aldready on the list.",
+              to_string(set).c_str());
+        return 0;
+    }
+    // DCHECK_F(
+    //     find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
+    //     "The set is already in the list.");
 
     GRBLinExpr c = 0;
     for (const node& n : set) {
         c += var[n];
     }
-    constrs[set] = model.addConstr(c <= 1.0);
+    // constrs[set] = model.addConstr(c <= 1.0);
+    try {
+        constrs[set] = model.addConstr(c <= 1.0);
+    } catch (GRBException e) {
+        LOG_F(ERROR, "Error code = %d", e.getErrorCode());
+        LOG_F(ERROR, "%s", e.getMessage().c_str());
+        exit(1);
+    } catch (...) {
+        LOG_F(ERROR, "Exception during optimization");
+        exit(1);
+    }
 
     indep_sets.push_back(set);
+    return 1;
 }
 
 double Solver::solve(const Graph& g,
@@ -68,6 +85,9 @@ double Solver::solve(const Graph& g,
                      map<node_set, double>& x_s)
 {
     LOG_SCOPE_F(INFO, "Solver.");
+
+    // check if the graph is empty
+    DCHECK_F(g.get_n() > 0, "Graph is empty.");
 
     GRBModel model(_env);
     model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
@@ -113,7 +133,18 @@ double Solver::solve(const Graph& g,
     int i = 0;
     while (true) {
         i++;
-        model.optimize();
+        // Optimize model and get the exception
+        try {
+            model.optimize();
+        } catch (GRBException e) {
+            LOG_F(ERROR, "Error code = %d", e.getErrorCode());
+            LOG_F(ERROR, "%s", e.getMessage().c_str());
+            exit(1);
+        } catch (...) {
+            LOG_F(ERROR, "Exception during optimization");
+            exit(1);
+        }
+
         LOG_F(INFO,
               "Solved in %lf with value %lf",
               model.get(GRB_DoubleAttr_Runtime),
@@ -127,12 +158,19 @@ double Solver::solve(const Graph& g,
         write_mwis(g, weight, "mwis_" + to_string(i));
         vector<node_set> sets = pricing::solve(g, weight);
 
-        if (sets.empty()) {
-            break;
-        }
-
+        int changed = 0;
         for (const node_set& set : sets) {
-            add_constrain(model, vars, constrs, indep_sets, set);
+            for (node n : set) {
+                DCHECK_F(g.is_active(n), "%d node is not active.", n);
+            }
+            changed += add_constrain(model, vars, constrs, indep_sets, set);
+        }
+        if (!changed) {
+            LOG_F(INFO, "No more sets to add, but found %d.", (int)sets.size());
+            break;
+        } else {
+            LOG_F(
+                INFO, "Added %d sets of %d found.", changed, (int)sets.size());
         }
     }
 
