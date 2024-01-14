@@ -34,7 +34,7 @@ void write_mwis(const Graph& g,
     file << g.get_n() << " " << g.get_m() << endl;
     for_nodes(g, n) {
         // transform weight to integer
-        int w = (int)round(weight[n] * 214748);
+        int const w = static_cast<int>(round(weight[n] * 214748));
         file << w << " ";
         for_adj(g, n, u) {
             file << u + 1 << " ";
