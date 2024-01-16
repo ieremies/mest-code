@@ -50,8 +50,8 @@ INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC) -I$(CLIQUER_DIR)
 LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB) -L$(CLIQUER_DIR)
 
 _EX = main.cpp
-# _SR = pricing.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
-_SR = pricing_cliquer.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
+_SR = pricing.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
+# _SR = pricing_cliquer.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
 _OB = $(_SR:.cpp=.o) loguru.o $(CLIQUER_OBJ) # all object files
 _BN = $(_EX:.cpp=.e) # all executables
 

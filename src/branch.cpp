@@ -13,10 +13,10 @@ pair<node, node> find_vertexes(const Graph& g,
 
     vector<vector<double>> diff(g.get_n(), vector<double>(g.get_n(), 0));
     for (const node_set& set : indep_set) {
-        for (node u : set) {
+        for (node const u : set) {
             CHECK_F(g.is_active(u),
                     "node that is not active is in indep sets.");
-            for (node v : set) {
+            for (node const v : set) {
                 CHECK_F(g.is_active(v),
                         "node that is not active is in indep sets.");
                 if (u < v) {
@@ -44,6 +44,10 @@ pair<node, node> find_vertexes(const Graph& g,
     return make_pair(u, v);
 }
 
+/*
+** Function that determines wheter or not to branch.
+** If so, add the branch to the "tree" (stack).
+*/
 void Branch::branch(const Graph& g,
                     const vector<node_set>& indep_sets,
                     const map<node_set, double>& x_s,
@@ -106,15 +110,15 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
         return {};
     }
 
-    // while worst than UB or completed
     Branch::node n = tree.top();
 
-    // TODO tá certo esse +1?
-    while (n.obj_val >= upper_bound + EPS
-           or (n.conflict_done and n.contract_done))
+    while (n.obj_val >= upper_bound + EPS  // if it's worse then UB
+           or (n.conflict_done and n.contract_done))  // or has been completed
     {
+        // remove from tree
         tree.pop();
 
+        // undo what has been done
         if (n.contract_done) {
             g.undo(mod_type::contract, n.u, n.v);
         } else if (n.conflict_done) {
@@ -125,6 +129,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
             return {};
         }
 
+        // go to next
         n = tree.top();
     }
 
