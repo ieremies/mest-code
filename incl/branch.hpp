@@ -7,13 +7,6 @@
 class Branch
 {
   public:
-    void branch(const Graph&,
-                const vector<node_set>&,
-                const map<node_set, double>& x_s,
-                const double&);
-
-    vector<node_set> next(Graph&, const cost&);
-
     struct node
     {
         bool conflict_done;
@@ -22,8 +15,24 @@ class Branch
         Graph::node u, v;
         vector<node_set> indep_sets;
     };
-    Branch()
-        : tree() {};
+
+    Branch() = default;
+
+    /*
+    ** Function that determines wheter or not to branch.
+    ** It receives an instance of the problem with some independent sets with
+    ** also the current solution (x_s) and the current objective value
+    ** (obj_val).
+    */
+    void branch(const Graph&,
+                const vector<node_set>&,
+                const map<node_set, double>&,
+                const double&);
+
+    /*
+    **
+    */
+    vector<node_set> next(Graph&, const cost&);
 
   private:
     stack<Branch::node> tree;

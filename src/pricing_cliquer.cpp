@@ -7,7 +7,10 @@ extern "C"
 #include "../lib/cliquer-1.21/cliquer.h"
 }
 
-#define MAX_CLIQUE 100
+enum
+{
+    max_clique = 100
+};
 
 vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
 {
@@ -50,9 +53,9 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     }
     DCHECK_F(graph_test(g_cliquer, NULL), "Graph is not valid.");
 
-    set_t clique_list[MAX_CLIQUE];
+    set_t clique_list[max_clique];
     clique_default_options->clique_list = clique_list;
-    clique_default_options->clique_list_length = MAX_CLIQUE;
+    clique_default_options->clique_list_length = max_clique;
     clique_default_options->time_function = NULL;
     qtd =
         clique_find_all(g_cliquer, precision + 1, 0, 1, clique_default_options);
@@ -60,7 +63,7 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     LOG_F(INFO, "Found %d cliques.", qtd);
 
     vector<node_set> indep_sets = {};
-    for (int i = 0; i < qtd and i < MAX_CLIQUE; i++) {
+    for (int i = 0; i < qtd and i < max_clique; i++) {
         node_set set = {};
         for (setelement j = 0; j < non_zero.size(); j++) {
             if (SET_CONTAINS(clique_list[i], j)) {
