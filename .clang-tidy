@@ -15,6 +15,7 @@ Checks: "*,\
   -cppcoreguidelines-pro-type-vararg,\
   -modernize-use-trailing-return-type,\
   -readability-identifier-length,\
+  -google-runtime-int,\
   -hicpp-vararg"
 WarningsAsErrors: ''
 CheckOptions:

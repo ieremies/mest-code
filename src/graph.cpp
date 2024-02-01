@@ -17,12 +17,41 @@ Graph::Graph(int nnodes)
 
 Graph::node Graph::get_n() const
 {
-    return n;
+    // return n;
+    int count = 0;
+    for (node i = 0; i < n; i++) {
+        if (active[i]) {
+            count++;
+        }
+    }
+    return count;
 }
 
 unsigned long int Graph::get_m() const
 {
-    return m;
+    // return m;
+    unsigned long int count = 0;
+    for (node i = 0; i < n; i++) {
+        if (active[i]) {
+            for (node j = 0; j < n; j++) {
+                if (active[j]) {
+                    count += adj[i][j];
+                }
+            }
+        }
+    }
+    return count / 2;
+}
+
+// copy constructor
+Graph::Graph(const Graph& g)
+    : n(g.n)
+    , m(g.m)
+    , delta(g.delta)
+    , deg(g.deg)
+    , active(g.active)
+    , adj(g.adj)
+{
 }
 
 Graph::node Graph::check_deg(node u) const
@@ -36,13 +65,37 @@ Graph::node Graph::check_deg(node u) const
     return count;
 }
 
+bool Graph::is_empty() const
+{
+    for (node u = 0; u < n; u++) {
+        if (is_active(u)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 Graph::node Graph::get_degree(node u) const
 {
     if (not is_active(u)) {
         return 0;
     }
-    DCHECK_F(deg[u] == check_deg(u), "Degree is not consistent (%d).", u);
+    DCHECK_F(deg[u] == check_deg(u),
+             "Degree is not consistent (%d)\n%s.",
+             u,
+             loguru::stacktrace().c_str());
     return deg[u];
+}
+
+Graph::node Graph::max_degree() const
+{
+    node max = 0;
+    for (node u = 0; u < n; u++) {
+        if (get_degree(u) > get_degree(max)) {
+            max = u;
+        }
+    }
+    return max;
 }
 
 bool Graph::is_active(node u) const
@@ -76,6 +129,39 @@ void Graph::undo_conflict(node u, node v)
 {
     LOG_F(INFO, "Undoing conflict %d %d.", u, v);
     remove_edge(u, v);
+}
+
+void Graph::deactivate(node v)
+{
+    if (not is_active(v)) {
+        return;
+    }
+    LOG_F(INFO, "Deactivating node %d.", v);
+    // adj[v] should not change
+    for (node u = 0; u < n; u++) {
+        if (is_active(u) and get_adjacency(u, v) > 0) {
+            adj[u][v] = 0;
+            deg[u]--;
+        }
+    }
+
+    active[v] = false;
+}
+
+void Graph::activate(node v)
+{
+    if (is_active(v)) {
+        return;
+    }
+    LOG_F(INFO, "Activating node %d", v);
+    // adj[v] should have been kept untouched.
+    for (node u = 0; u < n; u++) {
+        if (is_active(u) and adj[v][u] > 0) {
+            adj[u][v] = adj[v][u];
+            deg[u]++;
+        }
+    }
+    active[v] = true;
 }
 
 void Graph::do_contract(node u, node v)

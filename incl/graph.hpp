@@ -39,6 +39,14 @@ class Graph
     explicit Graph(int);
     explicit Graph(string filename);
 
+    // copy constructor
+    Graph(const Graph&);
+
+    void deactivate(node);
+    void activate(node);
+
+    bool is_empty() const;
+
     node get_n() const;
     unsigned long int get_m() const;
 
@@ -46,6 +54,7 @@ class Graph
     void undo(mod_type, node, node);
 
     node get_degree(node) const;
+    node max_degree() const;
     bool is_active(node) const;
 
     unsigned long int add_edge(node, node);

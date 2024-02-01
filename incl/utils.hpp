@@ -18,9 +18,8 @@
 #    define LOGURU_VERBOSE loguru::Verbosity_MAX
 #endif
 
-#include <loguru.hpp>
-
 #include "../incl/graph.hpp"
+#include "../lib/loguru.hpp"
 
 #define EPS 1e-9
 
@@ -35,7 +34,7 @@ void log_solution(const Graph& g,
 bool integral(const map<node_set, double>&);
 void maximal_set(const Graph&, node_set&);
 
-inline auto to_string(const mod_type& t)
+inline string to_string(const mod_type& t)
 {
     return t == mod_type::contract ? "contract" : "conflict";
 }

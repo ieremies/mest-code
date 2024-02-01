@@ -159,7 +159,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
         n.conflict_done = true;
     }
 
-    LOG_F(INFO, "%s on %d <- %d", to_string(t), n.u, n.v);
+    LOG_F(INFO, "%s on %d <- %d", to_string(t).c_str(), n.u, n.v);
     g.change(t, n.u, n.v);
     tree.push(n);
 
