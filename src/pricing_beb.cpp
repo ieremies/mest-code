@@ -141,7 +141,7 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<double>& weight)
         best = actual;
 
         // find the vertex with max degree in G
-        Graph::node const v = b_node.g.max_degree();
+        Graph::node const v = b_node.g.get_node_max_degree();
         node_set const confining_set = confine(b_node.g, v, weight);
 
         // g1 <- G - N[Sv]
