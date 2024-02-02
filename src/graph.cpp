@@ -15,21 +15,25 @@ Graph::Graph(int nnodes)
 {
 }
 
+// copy constructor
+Graph::Graph(const Graph& g)
+    : n(g.n)
+    , m(g.m)
+    , delta(g.delta)
+    , deg(g.deg)
+    , active(g.active)
+    , adj(g.adj)
+{
+}
+
 Graph::node Graph::get_n() const
 {
-    // return n;
-    int count = 0;
-    for (node i = 0; i < n; i++) {
-        if (active[i]) {
-            count++;
-        }
-    }
-    return count;
+    return n;
 }
 
 unsigned long int Graph::get_m() const
 {
-    // return m;
+    // FIXME I can save this info and not recompute every time.
     unsigned long int count = 0;
     for (node i = 0; i < n; i++) {
         if (active[i]) {
@@ -43,36 +47,25 @@ unsigned long int Graph::get_m() const
     return count / 2;
 }
 
-// copy constructor
-Graph::Graph(const Graph& g)
-    : n(g.n)
-    , m(g.m)
-    , delta(g.delta)
-    , deg(g.deg)
-    , active(g.active)
-    , adj(g.adj)
+bool Graph::is_empty() const
 {
+    for (node i = 0; i < n; i++) {
+        if (active[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 Graph::node Graph::check_deg(node u) const
 {
     node count = 0;
-    for (node v = 0; v < get_n(); v++) {
+    for (node v = 0; v < n; v++) {
         if (get_adjacency(u, v) > 0) {
             count++;
         }
     }
     return count;
-}
-
-bool Graph::is_empty() const
-{
-    for (node u = 0; u < n; u++) {
-        if (is_active(u)) {
-            return false;
-        }
-    }
-    return true;
 }
 
 Graph::node Graph::get_degree(node u) const
@@ -81,21 +74,33 @@ Graph::node Graph::get_degree(node u) const
         return 0;
     }
     DCHECK_F(deg[u] == check_deg(u),
-             "Degree is not consistent (%d)\n%s.",
+             "Degree is not consistent (%d: %d != %d).",
              u,
-             loguru::stacktrace().c_str());
+             deg[u],
+             check_deg(u));
     return deg[u];
 }
 
-Graph::node Graph::max_degree() const
+Graph::node Graph::get_node_max_degree() const
 {
     node max = 0;
+    node max_deg = 0;
     for (node u = 0; u < n; u++) {
-        if (get_degree(u) > get_degree(max)) {
+        node const deg_u = get_degree(u);
+        if (deg_u > max_deg) {
             max = u;
+            max_deg = deg_u;
         }
     }
     return max;
+}
+
+bool Graph::check_all_deg() const
+{
+    for (node u = 0; u < n; u++) {
+        (void)get_degree(u);
+    }
+    return true;
 }
 
 bool Graph::is_active(node u) const
@@ -108,14 +113,12 @@ Graph::node Graph::get_adjacency(node u, node v) const
     if (not is_active(u) or not is_active(v) or u == v) {
         return 0;
     }
-    DCHECK_F(
-        adj[u][v] == adj[v][u],
-        "Adjacency of %d %d (active) nodes are not mirrowed (%d | %d).\n%s",
-        u,
-        v,
-        adj[u][v],
-        adj[v][u],
-        loguru::stacktrace().c_str());
+    DCHECK_F(adj[u][v] == adj[v][u],
+             "Adjacency of %d %d (active) nodes are not mirrowed (%d | %d).",
+             u,
+             v,
+             adj[u][v],
+             adj[v][u]);
     return adj[u][v];
 }
 
@@ -131,86 +134,91 @@ void Graph::undo_conflict(node u, node v)
     remove_edge(u, v);
 }
 
-void Graph::deactivate(node v)
+void Graph::deactivate(node u)
 {
-    if (not is_active(v)) {
-        return;
+    if (not is_active(u)) {
+        return;  // nothing to do
     }
-    LOG_F(INFO, "Deactivating node %d.", v);
-    // adj[v] should not change
-    for (node u = 0; u < n; u++) {
-        if (is_active(u) and get_adjacency(u, v) > 0) {
-            adj[u][v] = 0;
-            deg[u]--;
+    LOG_F(INFO, "Deactivating node %d.", u);
+    // adj[u] should not change
+    for (node v = 0; v < n; v++) {
+        // if v is inactive, adj[u][v] is 0;
+        // therefore this will not act in a inative node.
+        if (adj[u][v] > 0) {
+            DCHECK_F(is_active(v), "Changing adjacency of inactive node.");
+            deg[v]--;
+            adj[v][u] = 0;
         }
     }
 
-    active[v] = false;
-}
-
-void Graph::activate(node v)
-{
-    if (is_active(v)) {
-        return;
-    }
-    LOG_F(INFO, "Activating node %d", v);
-    // adj[v] should have been kept untouched.
-    for (node u = 0; u < n; u++) {
-        if (is_active(u) and adj[v][u] > 0) {
-            adj[u][v] = adj[v][u];
-            deg[u]++;
-        }
-    }
-    active[v] = true;
+    active[u] = false;
+    DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
 void Graph::do_contract(node u, node v)
 {
+    // v will be deactivated and adj[v] should be kept unchanged.
+    // u will be added all v's edges
+    DCHECK_F(is_active(u) && is_active(v), "Interacting with inactive nodes.");
     LOG_F(INFO, "Doing contract %d %d.", u, v);
-    for (node n1 = 0; n1 < n; n1++) {
-        if (get_adjacency(v, n1) == 0) {
+    for (node w = 0; w < n; w++) {
+        if (get_adjacency(v, w) == 0 or w == u) {
             continue;
         }
-
-        if (adj[u][n1] == 0) {
+        if (adj[u][w] == 0) {
             deg[u]++;
+            deg[w]++;
         }
-        if (adj[n1][v] > 0) {
-            deg[u]--;
-        }
-        adj[u][n1] += adj[n1][v];
-        adj[n1][u] += adj[n1][v];
-        adj[n1][v] = 0;
+        adj[u][w] += adj[v][w];
+        adj[w][u] += adj[v][w];
+
+        adj[w][v] = 0;
+        deg[w]--;
+    }
+
+    if (adj[u][v] > 0) {
+        deg[u]--;
         adj[u][v] = 0;
     }
+
     active[v] = false;
+
+    DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
 void Graph::undo_contract(node u, node v)
 {
+    DCHECK_F(is_active(u), "Interacting with inactive node.");
     LOG_F(INFO, "Undoing contract %d %d.", u, v);
     active[v] = true;
-    for (node n1 = 0; n1 < n; n1++) {
-        if (not is_active(n1) or adj[v][n1] == 0) {
+    for (node w = 0; w < n; w++) {
+        if (adj[v][w] == 0 or not is_active(w) or w == u) {
             continue;
         }
-        if (adj[u][n1] == adj[v][n1]) {
+        adj[u][w] -= adj[v][w];
+        adj[w][u] -= adj[v][w];
+
+        if (adj[u][w] == 0) {
             deg[u]--;
+            deg[w]--;
         }
-        if (adj[n1][v] == 0) {
-            deg[u]++;
-        }
-        adj[u][n1] -= adj[v][n1];
-        adj[n1][u] -= adj[v][n1];
-        adj[n1][v] = adj[v][n1];
+
+        adj[w][v] = adj[v][w];
+        deg[w]++;
+    }
+
+    if (adj[u][v] > 0) {
+        deg[u]++;
         adj[u][v] = adj[v][u];
     }
+
+    DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
 void Graph::change(mod_type t, node u, node v)
 {
-    CHECK_F(active[u] && active[v], "Interacting with inactive nodes.");
-    CHECK_F(u != v, "Cannoct act with equal nodes.");
+    DCHECK_F(active[u] && active[v], "Interacting with inactive nodes.");
+    DCHECK_F(u != v, "Cannoct act with equal nodes.");
 
     if (t == mod_type::conflict) {
         do_conflict(u, v);
@@ -223,11 +231,11 @@ void Graph::change(mod_type t, node u, node v)
 
 void Graph::undo(mod_type tc, node uc, node vc)
 {
-    CHECK_F(uc != vc, "Cannot act with equal nodes.");
-    CHECK_F(active[uc], "Interacting with inactive node.");
+    DCHECK_F(uc != vc, "Cannot act with equal nodes.");
+    DCHECK_F(active[uc], "Interacting with inactive node.");
 
     const auto [t, u, v] = delta.back();
-    CHECK_F(tc == t and uc == u and vc == v, "Undoing in the wrong order.");
+    DCHECK_F(tc == t and uc == u and vc == v, "Undoing in the wrong order.");
 
     if (t == mod_type::conflict) {
         undo_conflict(u, v);
@@ -240,9 +248,9 @@ void Graph::undo(mod_type tc, node uc, node vc)
 
 unsigned long int Graph::add_edge(node u, node v)
 {
-    CHECK_F(
+    DCHECK_F(
         active[u] && active[v], "Interacting with inactive nodes %d %d", u, v);
-    CHECK_F(u != v, "Cannoct act with equal nodes.");
+    DCHECK_F(u != v, "Cannoct act with equal nodes.");
 
     if (adj[u][v]++ == 0) {
         deg[u]++;
@@ -252,14 +260,15 @@ unsigned long int Graph::add_edge(node u, node v)
     }
     m++;
 
+    DCHECK_F(check_all_deg(), "Degree is not consistent.");
     return m;
 }
 
 unsigned long int Graph::remove_edge(node u, node v)
 {
-    CHECK_F(active[u] && active[v], "Interacting with inactive nodes");
-    CHECK_F(u != v, "Cannoct act with equal nodes.");
-    CHECK_F(adj[u][v] > 0, "Edge does not exists.");
+    DCHECK_F(active[u] && active[v], "Interacting with inactive nodes");
+    DCHECK_F(u != v, "Cannoct act with equal nodes.");
+    DCHECK_F(adj[u][v] > 0, "Edge does not exists.");
 
     if (--adj[u][v] == 0) {
         deg[u]--;
@@ -269,6 +278,7 @@ unsigned long int Graph::remove_edge(node u, node v)
     }
     m--;
 
+    DCHECK_F(check_all_deg(), "Degree is not consistent.");
     return m;
 }
 

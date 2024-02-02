@@ -36,31 +36,26 @@ class Graph
         node u, v;
     };
 
+    // === Constructors ======================================
     explicit Graph(int);
-    explicit Graph(string filename);
-
-    // copy constructor
     Graph(const Graph&);
 
-    void deactivate(node);
-    void activate(node);
-
+    // === Getters ===========================================
+    node get_n() const;  // number of active nodes
     bool is_empty() const;
-
-    node get_n() const;
-    unsigned long int get_m() const;
-
-    void change(mod_type, node, node);
-    void undo(mod_type, node, node);
+    unsigned long int get_m() const;  // FIXME this function is not clear
 
     node get_degree(node) const;
-    node max_degree() const;
+    node get_node_max_degree() const;
     bool is_active(node) const;
 
-    unsigned long int add_edge(node, node);
-    unsigned long int remove_edge(node, node);
+    /*
+     * @brief Get the number of edges beteween two nodes. If either are
+     * inactive or equal, their adjacency is 0.
+     */
     node get_adjacency(node, node) const;
 
+    // === Used for iterators ================================
     node first_act_node() const;
     node next_act_node(node) const;
 
@@ -69,6 +64,15 @@ class Graph
 
     edge first_edge() const;
     edge next_edge(edge) const;
+
+    // === Functions to modify the graph =====================
+    void deactivate(node);
+
+    void change(mod_type, node, node);
+    void undo(mod_type, node, node);
+
+    unsigned long int add_edge(node, node);
+    unsigned long int remove_edge(node, node);
 
     void log() const;
     void apply_changes_to_sol(vector<set<Graph::node>>&) const;
@@ -87,6 +91,7 @@ class Graph
     void do_contract(node, node);
     void undo_contract(node, node);
     node check_deg(node) const;
+    bool check_all_deg() const;
 };
 
 using node_set = set<Graph::node>;

@@ -26,6 +26,7 @@ Solver::Solver()
     }
     _env.start();
 }
+
 void write_mwis(const Graph& g,
                 const vector<double>& weight,
                 const string& filename)
@@ -118,7 +119,13 @@ double Solver::solve(const Graph& g,
             is_used[n] = true;
         }
 
-        constrs[set] = model.addConstr(c <= 1.0);
+        try {
+            constrs[set] = model.addConstr(c <= 1.0);
+        } catch (GRBException e) {
+            LOG_F(ERROR, "Error code = %d", e.getErrorCode());
+            LOG_F(ERROR, "%s", e.getMessage().c_str());
+            exit(1);
+        }
     }
 
     for_nodes(g, u) {
@@ -140,11 +147,7 @@ double Solver::solve(const Graph& g,
             LOG_F(ERROR, "Error code = %d", e.getErrorCode());
             LOG_F(ERROR, "%s", e.getMessage().c_str());
             exit(1);
-        } catch (...) {
-            LOG_F(ERROR, "Exception during optimization");
-            exit(1);
         }
-
         LOG_F(INFO,
               "Solved in %lf with value %lf",
               model.get(GRB_DoubleAttr_Runtime),
