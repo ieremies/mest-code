@@ -27,13 +27,6 @@ GUROBI_LIB = -L$(GUROBI_DIR)/lib -lgurobi_c++ -lgurobi$(FLAGVERSION)
 LOGURU_DIR = $(HOMEDIR)/lib
 LOGURU_INC = -I$(LOGURU_DIR)
 
-#================= CLIQUER =====================================================
-CLIQUER_DIR = $(HOMEDIR)/lib/cliquer-1.21
-CLIQUER_SR = cliquer.c reorder.c graph_cliquer.c
-CLIQUER_SRC = $(patsubst %,$(CLIQUER_DIR)/%,$(CLIQUER_SR))
-CLIQUER_OBJ = $(CLIQUER_SR:.c=.o)
-
-
 #===============================================================================
 HOMEDIR_INC = $(HOMEDIR)/incl
 HOMEDIR_SRC = $(HOMEDIR)/src
@@ -46,13 +39,12 @@ $(shell mkdir -p $(HOMEDIR_OBJ) $(HOMEDIR_BIN) $(HOMEDIR_LIB))
 
 #---------------------------------------------
 # define includes and libraries
-INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC) -I$(CLIQUER_DIR)
-LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB) -L$(CLIQUER_DIR)
+INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC)
+LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
 _SR = pricing.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
-# _SR = pricing_cliquer.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
-_OB = $(_SR:.cpp=.o) loguru.o $(CLIQUER_OBJ) # all object files
+_OB = $(_SR:.cpp=.o) loguru.o
 _BN = $(_EX:.cpp=.e) # all executables
 
 # Complete paths
@@ -61,15 +53,6 @@ _OBJ = $(patsubst %,$(HOMEDIR_OBJ)/%,$(_OB))
 _BIN = $(patsubst %,$(HOMEDIR_BIN)/%,$(_BN))
 
 executable: $(_OBJ) $(_SRC) $(_BIN)
-
-$(HOMEDIR_OBJ)/cliquer.o: $(CLIQUER_DIR)/cliquer.c
-	gcc -c -fomit-frame-pointer -funroll-loops $^ -o $@ $(INC)
-
-$(HOMEDIR_OBJ)/reorder.o: $(CLIQUER_DIR)/reorder.c
-	gcc -c -fomit-frame-pointer -funroll-loops $^ -o $@ $(INC)
-
-$(HOMEDIR_OBJ)/graph_cliquer.o: $(CLIQUER_DIR)/graph_cliquer.c
-	gcc -c -fomit-frame-pointer -funroll-loops $^ -o $@ $(INC)
 
 $(HOMEDIR_OBJ)/loguru.o: $(LOGURU_DIR)/loguru.cpp
 	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)

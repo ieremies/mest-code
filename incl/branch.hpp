@@ -11,7 +11,7 @@ class Branch
     {
         bool conflict_done;
         bool contract_done;
-        double obj_val;
+        cost obj_val;
         Graph::node u, v;
         vector<node_set> indep_sets;
     };
@@ -27,10 +27,13 @@ class Branch
     void branch(const Graph&,
                 const vector<node_set>&,
                 const map<node_set, double>&,
-                const double&);
+                const cost&);
 
     /*
-    **
+    ** Goes to the next node in the branch tree.
+    ** It undoes and does the necessary operations to the graph and the
+    ** independent sets to go to the next node.
+    ** It returns the independent sets of the next node.
     */
     vector<node_set> next(Graph&, const cost&);
 

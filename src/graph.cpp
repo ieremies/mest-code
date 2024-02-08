@@ -364,3 +364,25 @@ Graph::edge Graph::next_edge(edge e) const
     }
     return {n, n};
 }
+
+node_set Graph::get_closed_neighborhood(node_set& s) const
+{
+    node_set ret = s;
+    for (const auto& u : s) {
+        for (node v = 0; v < n; v++) {
+            if (get_adjacency(u, v) > 0) {
+                ret.insert(v);
+            }
+        }
+    }
+    return ret;
+}
+
+node_set Graph::get_open_neighborhood(node_set& s) const
+{
+    node_set ret = get_closed_neighborhood(s);
+    for (const auto& u : s) {
+        ret.erase(u);
+    }
+    return ret;
+}

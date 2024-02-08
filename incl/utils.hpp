@@ -23,6 +23,15 @@
 
 #define EPS 1e-9
 
+#define HANDLE_GRB_EXCEPTION(instruction) \
+    try { \
+        instruction; \
+    } catch (GRBException & e) { \
+        ABORT_F("GRB_exception = %d (%s)", \
+                e.getErrorCode(), \
+                e.getMessage().c_str()); \
+    }
+
 using namespace std;
 using color = unsigned int;
 using cost = long double;
@@ -30,9 +39,10 @@ using cost = long double;
 string to_string(const node_set&);
 void log_solution(const Graph& g,
                   const map<node_set, double>& x_s,
-                  const double& sol);
+                  const cost& sol);
 bool integral(const map<node_set, double>&);
 void maximal_set(const Graph&, node_set&);
+bool check_indep_sets(const Graph&, const vector<node_set>&);
 
 inline string to_string(const mod_type& t)
 {

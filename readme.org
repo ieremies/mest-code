@@ -9,47 +9,9 @@ algo que constantemente eu me confundo:
 - Para eu determinar qual é o melhor para aquela subtree, eu tenho que resolver todos os ramos dela.
 
 
-#+begin_src c
-UB, indep_sets = initial_heuristic(graph)
+* Tarefas:
+** TODO Ao desfazer um contract, dá para percorrer os independent sets e adicionando o cara que tá voltando quando der.
 
-while True {
-    indep_sets = branch::next(&graph) // altera graph
-    // recuperar os indep_sets do pai
-
-}
-#+end_src
-
-=solver= resolve o ILP via geração de linhas (já que estamos usando o dual).
-Ele me devolve =x_s=, o conjunto de pesos dos indep_sets (advindo dos shadow prices).
-Esses =x_s[set] = 1= se o =set= está na solução
-# BUG não entendi 100% essa parada de shadow price
-
-* Branch
-Mantém uma pilha de nó.
-Cada nó contém:
-- um par de vértices a ser dado branch.
-- o valor da solução
-- o conjunto de indep_sets
-- um marcador se já foi feito o branch no conflito e/ou na contração.
-
-** Next
-Define qual nó da árvore é o próximo a ser resolvido.
-Como estamos fazendo uma abordagem em profundidade, pegamos da pilha de branch o nó do topo.
-Se a solução desse nó for maior que o upper_bound, removemos da pilha e olhamos o próximo.
-Caso contrário:
-- se já foi feito o conflito: fazemos a contração dos vértices
-- caso contrário: fazemos o conflito dos vértices
-- marcamos no nó que fizemos
-- retornamos o conjunto de indep_sets (feitas as alterações correspondentes à modificação).
-
-Se a pilha ficar vazia, acabamos.
-** Branch
-Baseado na atual solução, que sabemos ser ótima para o conjunto de decisões que tomamos até então, determinamos qual o par de vértices a ser feito o branching.
-Atualmente fazemos isso pegando o par de nós que estamos "mais em dúvida".
-Ter dúvida entre colocar o par u v no mesmo conjunto se manifesta em ele aparecer em conjuntos com valores próximos de 0.5
-duvida[u,v] += 0.5 - abs(0.5 - x_s[set]) para set in indep_sets
-# TODO conferir com a literatura de binpacking
-*
 
 * Instances
 All the instances used are under the folder =inst=. The subfolder are used to specify where they were obtained:
