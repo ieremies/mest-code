@@ -28,6 +28,7 @@ class Graph
 {
   public:
     using node = short unsigned int;
+    using node_set = set<node>;
     using edge = pair<node, node>;
 
     struct mod
@@ -65,6 +66,9 @@ class Graph
     edge first_edge() const;
     edge next_edge(edge) const;
 
+    node_set get_open_neighborhood(node_set&) const;
+    node_set get_closed_neighborhood(node_set&) const;
+
     // === Functions to modify the graph =====================
     void deactivate(node);
 
@@ -94,7 +98,7 @@ class Graph
     bool check_all_deg() const;
 };
 
-using node_set = set<Graph::node>;
+using node_set = Graph::node_set;
 using node = Graph::node;
 using edge = Graph::edge;
 #endif

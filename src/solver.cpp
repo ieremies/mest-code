@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <vector>
 
 #include "../incl/solver.hpp"
@@ -27,58 +26,27 @@ Solver::Solver()
     _env.start();
 }
 
-void write_mwis(const Graph& g,
-                const vector<double>& weight,
-                const string& filename)
+/*
+** Add a new constrain to the model and update the list of independent sets.
+** The constrain is that the sum of the weights of the nodes in the set is <= 1.
+*/
+void add_constrain(GRBModel& model,
+                   const vector<GRBVar>& var,
+                   map<node_set, GRBConstr>& constrs,
+                   vector<node_set>& indep_sets,
+                   const node_set& set)
 {
-    ofstream file(filename);
-    file << g.get_n() << " " << g.get_m() << endl;
-    for_nodes(g, n) {
-        // transform weight to integer
-        int const w = static_cast<int>(round(weight[n] * 214748));
-        file << w << " ";
-        for_adj(g, n, u) {
-            file << u + 1 << " ";
-        }
-        file << endl;
-    }
-    file.close();
-}
-
-int add_constrain(GRBModel& model,
-                  const vector<GRBVar>& var,
-                  map<node_set, GRBConstr>& constrs,
-                  vector<node_set>& indep_sets,
-                  const node_set& set)
-{
-    if (find(indep_sets.begin(), indep_sets.end(), set) != indep_sets.end()) {
-        LOG_F(WARNING,
-              "Skipping set %s. It's aldready on the list.",
-              to_string(set).c_str());
-        return 0;
-    }
-    // DCHECK_F(
-    //     find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
-    //     "The set is already in the list.");
+    DCHECK_F(
+        find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
+        "The set is already in the list.");
 
     GRBLinExpr c = 0;
     for (const node& n : set) {
         c += var[n];
     }
-    // constrs[set] = model.addConstr(c <= 1.0);
-    try {
-        constrs[set] = model.addConstr(c <= 1.0);
-    } catch (GRBException e) {
-        LOG_F(ERROR, "Error code = %d", e.getErrorCode());
-        LOG_F(ERROR, "%s", e.getMessage().c_str());
-        exit(1);
-    } catch (...) {
-        LOG_F(ERROR, "Exception during optimization");
-        exit(1);
-    }
+    HANDLE_GRB_EXCEPTION(constrs[set] = model.addConstr(c <= 1.0));
 
     indep_sets.push_back(set);
-    return 1;
 }
 
 double Solver::solve(const Graph& g,
@@ -86,9 +54,8 @@ double Solver::solve(const Graph& g,
                      map<node_set, double>& x_s)
 {
     LOG_SCOPE_F(INFO, "Solver.");
-
-    // check if the graph is empty
     DCHECK_F(g.get_n() > 0, "Graph is empty.");
+    DCHECK_F(check_indep_sets(g, indep_sets), "Invalid independent sets.");
 
     GRBModel model(_env);
     model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
@@ -113,19 +80,12 @@ double Solver::solve(const Graph& g,
         DCHECK_F(!set.empty(), "Empty set in the list.");
 
         GRBLinExpr c = 0;
-        for (node n : set) {
-            DCHECK_F(g.is_active(n), "node is not active.");
+        for (node const n : set) {
             c += vars[n];
             is_used[n] = true;
         }
 
-        try {
-            constrs[set] = model.addConstr(c <= 1.0);
-        } catch (GRBException e) {
-            LOG_F(ERROR, "Error code = %d", e.getErrorCode());
-            LOG_F(ERROR, "%s", e.getMessage().c_str());
-            exit(1);
-        }
+        HANDLE_GRB_EXCEPTION(constrs[set] = model.addConstr(c <= 1.0));
     }
 
     for_nodes(g, u) {
@@ -137,17 +97,9 @@ double Solver::solve(const Graph& g,
     LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
 
     vector<double> weight(g.get_n());
-    int i = 0;
     while (true) {
-        i++;
-        // Optimize model and get the exception
-        try {
-            model.optimize();
-        } catch (GRBException e) {
-            LOG_F(ERROR, "Error code = %d", e.getErrorCode());
-            LOG_F(ERROR, "%s", e.getMessage().c_str());
-            exit(1);
-        }
+        HANDLE_GRB_EXCEPTION(model.optimize());
+
         LOG_F(INFO,
               "Solved in %lf with value %lf",
               model.get(GRB_DoubleAttr_Runtime),
@@ -158,23 +110,19 @@ double Solver::solve(const Graph& g,
             weight[n] = vars[n].get(GRB_DoubleAttr_X);
         }
 
-        write_mwis(g, weight, "mwis_" + to_string(i));
-        vector<node_set> sets = pricing::solve(g, weight);
+        vector<node_set> const sets = pricing::solve(g, weight);
 
-        int changed = 0;
-        for (const node_set& set : sets) {
-            for (node n : set) {
-                DCHECK_F(g.is_active(n), "%d node is not active.", n);
-            }
-            changed += add_constrain(model, vars, constrs, indep_sets, set);
-        }
-        if (!changed) {
-            LOG_F(INFO, "No more sets to add, but found %d.", (int)sets.size());
+        if (sets.empty()) {
+            LOG_F(INFO, "No more sets to add.");
             break;
-        } else {
-            LOG_F(
-                INFO, "Added %d sets of %d found.", changed, (int)sets.size());
         }
+
+        DCHECK_F(check_indep_sets(g, sets), "Invalid new sets.");
+
+        for (const node_set& set : sets) {
+            add_constrain(model, vars, constrs, indep_sets, set);
+        }
+        LOG_F(INFO, "Added %d sets.", (int)sets.size());
     }
 
     LOG_F(INFO, "Final model with %d sets.", (int)indep_sets.size());

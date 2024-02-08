@@ -51,7 +51,7 @@ pair<node, node> find_vertexes(const Graph& g,
 void Branch::branch(const Graph& g,
                     const vector<node_set>& indep_sets,
                     const map<node_set, double>& x_s,
-                    const double& obj_val)
+                    const cost& obj_val)
 {
     LOG_SCOPE_F(INFO, "Branch::Branch");
     auto [u, v] = find_vertexes(g, indep_sets, x_s);
@@ -70,13 +70,13 @@ vector<node_set> clean_sets(const mod_type& t,
 {
     vector<node_set> ret;
     for (const node_set& set : indep_sets) {
-        auto find_u = set.find(u) == set.end();
-        auto find_v = set.find(v) == set.end();
+        auto found_u = set.find(u) != set.end();
+        auto found_v = set.find(v) != set.end();
 
-        if (t == mod_type::conflict and (find_u or find_v)) {
+        if (t == mod_type::conflict and not(found_u and found_v)) {
             ret.push_back(set);
         }
-        if (t == mod_type::contract and (find_u and find_v)) {
+        if (t == mod_type::contract and not(found_u or found_v)) {
             ret.push_back(set);
         }
     }
@@ -87,38 +87,24 @@ vector<node_set> clean_sets(const mod_type& t,
     return ret;
 }
 
-bool check_indep(const Graph& g, const vector<node_set>& indep_sets)
-{
-    for (const node_set& set : indep_sets) {
-        for (node const u : set) {
-            for (node const v : set) {
-                if (g.get_adjacency(u, v) != 0) {
-                    LOG_F(ERROR, "%d %d are not independent", u, v);
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
-}
+// TODO mudar conflict/contract para ser um marcador de estágio com uma
+// sequência: none -> conflict -> contract
 
 vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
 {
-    LOG_SCOPE_F(INFO, "Branch::Next");
+    LOG_SCOPE_FUNCTION(INFO);
 
     if (tree.empty()) {
         return {};
     }
-
     Branch::node n = tree.top();
 
     while (n.obj_val >= upper_bound + EPS  // if it's worse then UB
            or (n.conflict_done and n.contract_done))  // or has been completed
     {
-        // remove from tree
         tree.pop();
 
-        // undo what has been done
+        // undo the last done
         if (n.contract_done) {
             g.undo(mod_type::contract, n.u, n.v);
         } else if (n.conflict_done) {
@@ -128,15 +114,13 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
         if (tree.empty()) {
             return {};
         }
-
-        // go to next
         n = tree.top();
     }
 
     tree.pop();
 
     LOG_F(INFO,
-          "Looking node {%d,%d}: conflict %d | contract %d (sol: %lf)",
+          "Node {%d,%d}: conf %d | cont %d (ub: %Lf)",
           n.u,
           n.v,
           n.conflict_done,
@@ -145,6 +129,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
 
     // If any mod has been done, it's time to undo it.
     if (n.contract_done) {
+        // FIXME eu acho que isso nunca deve acontecer
         g.undo(mod_type::contract, n.u, n.v);
     } else if (n.conflict_done) {
         g.undo(mod_type::conflict, n.u, n.v);
@@ -164,7 +149,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
     tree.push(n);
 
     vector<node_set> ret = clean_sets(t, n.indep_sets, n.u, n.v);
-    DCHECK_F(check_indep(g, ret), "not independent set");
+    DCHECK_F(check_indep_sets(g, ret), "not independent set");
 
     return ret;
 }
