@@ -5,6 +5,8 @@
 
 #include "../incl/utils.hpp"
 
+int visited = 0;
+
 pair<node, node> find_vertexes(const Graph& g,
                                const vector<node_set>& indep_set,
                                map<node_set, double> x_s)
@@ -93,13 +95,14 @@ vector<node_set> clean_sets(const mod_type& t,
 vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
 {
     LOG_SCOPE_FUNCTION(INFO);
+    LOG_F(INFO, "Stack size: %lu | Visited: %d", tree.size(), visited);
 
     if (tree.empty()) {
         return {};
     }
     Branch::node n = tree.top();
 
-    while (n.obj_val >= upper_bound + EPS  // if it's worse then UB
+    while (n.obj_val > upper_bound + EPS  // if it's worse then UB
            or (n.conflict_done and n.contract_done))  // or has been completed
     {
         tree.pop();
@@ -112,6 +115,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
         }
 
         if (tree.empty()) {
+            LOG_F(INFO, "Stack is empty");
             return {};
         }
         n = tree.top();
@@ -151,5 +155,6 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
     vector<node_set> ret = clean_sets(t, n.indep_sets, n.u, n.v);
     DCHECK_F(check_indep_sets(g, ret), "not independent set");
 
+    visited++;
     return ret;
 }

@@ -66,8 +66,10 @@ class Graph
     edge first_edge() const;
     edge next_edge(edge) const;
 
-    node_set get_open_neighborhood(node_set&) const;
-    node_set get_closed_neighborhood(node_set&) const;
+    node_set get_open_neighborhood(const node&) const;
+    node_set get_open_neighborhood(const node_set&) const;
+    node_set get_closed_neighborhood(const node&) const;
+    node_set get_closed_neighborhood(const node_set&) const;
 
     // === Functions to modify the graph =====================
     void deactivate(node);

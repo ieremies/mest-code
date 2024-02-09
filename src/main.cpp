@@ -49,28 +49,8 @@ Graph* read_dimacs_instance(const string& filename)
     return g;
 }
 
-/*
-** The idea is to create some usefull independent sets.
-** - maximal independent set starting with each vertex
-** - maximal independent set starting with a pair of non-adj vertexes.
-** - remove one element from a independnet set
-**    not sure what
-*/
-void enrich(const Graph& g, vector<node_set>& indep_sets)
+void config_logging(int argc, char** argv)
 {
-    for (node_set set : indep_sets) {
-        maximal_set(g, set);
-    }
-    for_nodes(g, u) {
-        node_set s = {u};
-        maximal_set(g, s);
-        indep_sets.push_back(s);
-    }
-}
-
-int main(int argc, char** argv)
-{
-    // Logging config
     loguru::g_preamble_date = false;
     loguru::g_preamble_thread = false;
     loguru::g_preamble_time = false;
@@ -78,17 +58,22 @@ int main(int argc, char** argv)
     loguru::init(argc, argv);
     loguru::add_file(
         "log.log", loguru::FileMode::Truncate, loguru::Verbosity_INFO);
+}
+
+int main(int argc, char** argv)
+{
+    // Logging config
+    config_logging(argc, argv);
 
     // Read the instance and create the graph
     Graph* g = read_dimacs_instance(argv[1]);
 
     vector<node_set> indep_sets;
     cost upper_bound = heuristic(*g, indep_sets);
-    cost lower_bound = 0;
     enrich(*g, indep_sets);
 
     cost sol = 0;
-    map<node_set, double> x_s;  // x[s] = 1 if s is in the solution
+    map<node_set, double> x_s;
 
     Branch tree;
 
@@ -97,17 +82,10 @@ int main(int argc, char** argv)
         sol = Solver::get_instance().solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
 
-        if (lower_bound == 0) {
-            lower_bound = sol;
-            if (lower_bound + 1 > upper_bound) {
-                break;
-            }
-        }
-
         if (integral(x_s) and sol + EPS < upper_bound) {
             upper_bound = sol;
             log_solution(*g, x_s, sol);
-        } else {
+        } else if (ceil(sol) < upper_bound) {
             tree.branch(*g, indep_sets, x_s, sol);
         }
 
