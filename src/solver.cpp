@@ -38,7 +38,8 @@ void add_constrain(GRBModel& model,
 {
     DCHECK_F(
         find(indep_sets.begin(), indep_sets.end(), set) == indep_sets.end(),
-        "The set is already in the list.");
+        "The set %s is already in the list.",
+        to_string(set).c_str());
 
     GRBLinExpr c = 0;
     for (const node& n : set) {

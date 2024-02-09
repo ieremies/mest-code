@@ -139,7 +139,7 @@ void Graph::deactivate(node u)
     if (not is_active(u)) {
         return;  // nothing to do
     }
-    LOG_F(INFO, "Deactivating node %d.", u);
+    // LOG_F(INFO, "Deactivating node %d.", u);
     // adj[u] should not change
     for (node v = 0; v < n; v++) {
         // if v is inactive, adj[u][v] is 0;
@@ -147,6 +147,7 @@ void Graph::deactivate(node u)
         if (adj[u][v] > 0) {
             DCHECK_F(is_active(v), "Changing adjacency of inactive node.");
             deg[v]--;
+            m--;
             adj[v][u] = 0;
         }
     }
@@ -364,8 +365,9 @@ Graph::edge Graph::next_edge(edge e) const
     }
     return {n, n};
 }
-
-node_set Graph::get_closed_neighborhood(node_set& s) const
+// ==================== Neighborhood function ====================
+// TODO This could be faster, but it works for now
+node_set Graph::get_closed_neighborhood(const node_set& s) const
 {
     node_set ret = s;
     for (const auto& u : s) {
@@ -378,11 +380,23 @@ node_set Graph::get_closed_neighborhood(node_set& s) const
     return ret;
 }
 
-node_set Graph::get_open_neighborhood(node_set& s) const
+node_set Graph::get_open_neighborhood(const node_set& s) const
 {
     node_set ret = get_closed_neighborhood(s);
     for (const auto& u : s) {
         ret.erase(u);
     }
     return ret;
+}
+
+node_set Graph::get_closed_neighborhood(const node& u) const
+{
+    node_set const ret = {u};
+    return get_closed_neighborhood(ret);
+}
+
+node_set Graph::get_open_neighborhood(const node& u) const
+{
+    node_set const ret = {u};
+    return get_open_neighborhood(ret);
 }

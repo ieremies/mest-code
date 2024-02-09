@@ -43,7 +43,7 @@ INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
-_SR = pricing.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
+_SR = pricing_beb.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
 _OB = $(_SR:.cpp=.o) loguru.o
 _BN = $(_EX:.cpp=.e) # all executables
 

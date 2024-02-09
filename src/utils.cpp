@@ -102,3 +102,22 @@ bool check_indep_sets(const Graph& g, const vector<node_set>& indep_sets)
     }
     return true;
 }
+
+/*
+** The idea is to create some usefull independent sets.
+** - maximal independent set starting with each vertex
+** - maximal independent set starting with a pair of non-adj vertexes.
+** - remove one element from a independnet set
+**    not sure what
+*/
+void enrich(const Graph& g, vector<node_set>& indep_sets)
+{
+    for (node_set set : indep_sets) {
+        maximal_set(g, set);
+    }
+    for_nodes(g, u) {
+        node_set s = {u};
+        maximal_set(g, s);
+        indep_sets.push_back(s);
+    }
+}

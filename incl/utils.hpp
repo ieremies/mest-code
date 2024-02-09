@@ -43,6 +43,7 @@ void log_solution(const Graph& g,
 bool integral(const map<node_set, double>&);
 void maximal_set(const Graph&, node_set&);
 bool check_indep_sets(const Graph&, const vector<node_set>&);
+void enrich(const Graph& g, vector<node_set>& indep_sets);
 
 inline string to_string(const mod_type& t)
 {
