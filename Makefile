@@ -43,7 +43,7 @@ INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
-_SR = pricing_beb.cpp solver.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp # wave.cpp
+_SR = pricing_beb.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp main.cpp
 _OB = $(_SR:.cpp=.o) loguru.o
 _BN = $(_EX:.cpp=.e) # all executables
 
@@ -52,13 +52,16 @@ _SRC = $(patsubst %,$(HOMEDIR_SRC)/%,$(_EX))
 _OBJ = $(patsubst %,$(HOMEDIR_OBJ)/%,$(_OB))
 _BIN = $(patsubst %,$(HOMEDIR_BIN)/%,$(_BN))
 
-executable: $(_OBJ) $(_SRC) $(_BIN)
+executable: primal.e dual.e
+
+primal.e: $(HOMEDIR_OBJ)/solver_primal.o $(_OBJ)
+	$(CC) $(CC_ARGS) $(CC_WARN) $^ -o $(HOMEDIR_BIN)/$@ $(LIB) $(INC)
+
+dual.e: $(HOMEDIR_OBJ)/solver_dual.o $(_OBJ)
+	$(CC) $(CC_ARGS) $(CC_WARN) $^ -o $(HOMEDIR_BIN)/$@ $(LIB) $(INC)
 
 $(HOMEDIR_OBJ)/loguru.o: $(LOGURU_DIR)/loguru.cpp
-	$(CC) $(CC_ARGS) -c $^ -o $@ $(INC)
-
-$(HOMEDIR_BIN)/%.e: $(HOMEDIR_OBJ)/%.o $(_OBJ)
-	$(CC) $(CC_ARGS) $(CC_WARN) $^ -o $@ $(LIB) $(INC)
+	$(CC) $(CC_ARGS)  -c $^ -o $@ $(INC)
 
 $(HOMEDIR_OBJ)/%.o: $(HOMEDIR_SRC)/%.cpp
 	$(CC) $(CC_ARGS) $(CC_WARN) -c $^ -o $@ $(INC)

@@ -7,9 +7,27 @@
 // maximize     x_v weight_v
 // subjected to x_v + x_w <= 1 for all edges (v,w)
 //              x_v binary for all nodes v
-vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
+vector<node_set> pricing::solve(const Graph& g, const vector<cost>& weight)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
+
+    // Count number of 1 and 0 in the weight vector.
+    size_t n_1 = 0;
+    size_t n_0 = 0;
+    for (cost w : weight) {
+        if (w > 1 - EPS) {
+            n_1++;
+        }
+        if (w < EPS) {
+            n_0++;
+        }
+    }
+    LOG_F(INFO,
+          "%lu nodes with weight 1, %lu nodes with weight 0, %lu with decimal "
+          "ones.",
+          n_1,
+          n_0,
+          g.get_n() - n_1 - n_0);
 
     GRBEnv env = GRBEnv(true);
     env.set(GRB_IntParam_LogToConsole, 0);
@@ -19,9 +37,9 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     }
     env.start();
 
-    double lower_bound = 0;
+    cost lower_bound = 0;
     for_nodes(g, n) {
-        double dom = weight[n];
+        cost dom = weight[n];
         for_adj(g, n, u) {
             if (n != u) {
                 dom += weight[u];
@@ -29,7 +47,7 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
         }
         lower_bound = weight[n] * weight[n] / dom;
     }
-    LOG_F(INFO, "Lower bound: %f", lower_bound);
+    LOG_F(INFO, "Lower bound: %Lf", lower_bound);
 
     // Maximize model.
     GRBModel pricing_model(env);
@@ -63,7 +81,7 @@ vector<node_set> pricing::solve(const Graph& g, const vector<double>& weight)
     vector<node_set> sets = {};
 
     // While we can find a set with weight > 1.
-    while (pricing_model.get(GRB_DoubleAttr_ObjVal) >= 1 + EPS) {
+    while (pricing_model.get(GRB_CostAttr_ObjVal) >= 1 + EPS) {
         // Retrive the found set.
         node_set set;
         for_nodes(g, n) {

@@ -10,7 +10,6 @@ algo que constantemente eu me confundo:
 
 
 * Tarefas:
-** TODO Ao desfazer um contract, dá para percorrer os independent sets e adicionando o cara que tá voltando quando der.
 
 
 * Instances
@@ -24,3 +23,39 @@ We only care about maximal (insertion-wise) independent sets.
 If we find a feasible solution with only maximal independent sets, it may have some vertices in more then one set.
 We can obtain a solution without that fact heuristically and keeping the number of sets.
 When making sure no set violates the constrains in the dual program, we can be sure that if no maximal independent set can, so does every other independent set.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- Resolver a RL:
+  - Gero modelo inicial
+  - enquanto o pricing me dá ao menos um conjunto independente, eu otimizo
+  - Quando terminar, eu tenho o ótimo do RL
+  - Viabilizar
+- Se o ótimo é inteiro, legal!
+- Caso contrário, branch

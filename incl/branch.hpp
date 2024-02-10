@@ -26,7 +26,7 @@ class Branch
     */
     void branch(const Graph&,
                 const vector<node_set>&,
-                const map<node_set, double>&,
+                const map<node_set, cost>&,
                 const cost&);
 
     /*

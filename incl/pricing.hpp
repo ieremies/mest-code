@@ -7,7 +7,7 @@
 
 namespace pricing
 {
-vector<node_set> solve(const Graph&, const vector<double>&);
+vector<node_set> solve(const Graph&, const vector<cost>&);
 }  // namespace pricing
 
 #endif

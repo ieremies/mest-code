@@ -14,28 +14,29 @@ string to_string(const node_set& set)
 }
 
 void log_solution(const Graph& g,
-                  const map<node_set, double>& x_s,
+                  const vector<node_set>& indep_sets,
+                  map<node_set, cost>& x_s,
                   const cost& sol)
 {
-    vector<node_set> indep_sets;
-    for (const auto& [s, x] : x_s) {
-        if (x >= 1 - EPS) {
-            indep_sets.push_back(s);
+    vector<node_set> sets_sol;
+    for (node_set const& set : indep_sets) {
+        if (x_s[set] >= 1 - EPS) {
+            sets_sol.push_back(set);
         }
     }
-    g.apply_changes_to_sol(indep_sets);
+    // g.apply_changes_to_sol(indep_sets);
     string log = "SOL: %f = ";
-    for (const auto& s : indep_sets) {
+    for (const auto& s : sets_sol) {
         log += to_string(s) + " ";
     }
     LOG_F(WARNING, log.c_str(), sol);
 }
 
-bool integral(const map<node_set, double>& x_s)
+bool integral(const map<node_set, cost>& x_s)
 {
     for (const auto& [s, x] : x_s) {
         if (0 + EPS < x and x < 1 - EPS) {
-            LOG_F(INFO, "not integer %f", x);
+            LOG_F(INFO, "not integer %Lf", x);
             return false;
         }
     }

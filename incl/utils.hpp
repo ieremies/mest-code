@@ -38,9 +38,10 @@ using cost = long double;
 
 string to_string(const node_set&);
 void log_solution(const Graph& g,
-                  const map<node_set, double>& x_s,
+                  const vector<node_set>& indep_sets,
+                  map<node_set, cost>& x_s,
                   const cost& sol);
-bool integral(const map<node_set, double>&);
+bool integral(const map<node_set, cost>&);
 void maximal_set(const Graph&, node_set&);
 bool check_indep_sets(const Graph&, const vector<node_set>&);
 void enrich(const Graph& g, vector<node_set>& indep_sets);
