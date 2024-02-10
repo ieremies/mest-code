@@ -19,13 +19,13 @@ struct branch_node
 /*
 ** Heuristic to, given the current solution and graph, find a solution MWIS.
 */
-mwis_sol mwis_heu(const branch_node& n, const vector<double>& weight)
+mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
 {
     Graph g = Graph(n.g);
     mwis_sol sol = n.sol;
 
     while (not g.is_empty()) {
-        double max_weight = 0;
+        cost max_weight = 0;
         Graph::node max_node = 0;
         for_nodes(g, u) {
             if (weight[u] > max_weight) {
@@ -45,9 +45,9 @@ mwis_sol mwis_heu(const branch_node& n, const vector<double>& weight)
     return sol;
 }
 
-double w(const node_set& s, const vector<double>& weight)
+cost w(const node_set& s, const vector<cost>& weight)
 {
-    double sum = 0;
+    cost sum = 0;
     for (node const u : s) {
         sum += weight[u];
     }
@@ -83,7 +83,7 @@ constexpr std::set<T> set_difference(const std::set<T>& a, const std::set<T>& b)
 ** Function that computes the confining set of a node v.
 ** Returns an empty set if the node is unconfined.
 */
-node_set confine(const Graph& g, Graph::node v, const vector<double>& weight)
+node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
 {
     node_set s = {v};
 
@@ -153,7 +153,7 @@ node_set confine(const Graph& g, Graph::node v, const vector<double>& weight)
 ** Afterwards the vertex is marked as processed and we continue with the
 ** next one." -- Lamm2018, page6
 */
-cost mwis_ub(const branch_node n, const vector<double>& weight)
+cost mwis_ub(const branch_node n, const vector<cost>& weight)
 {
     // sort the vertices in descending order of their weight
     vector<Graph::node> sorted_nodes = {};
@@ -202,13 +202,13 @@ cost mwis_ub(const branch_node n, const vector<double>& weight)
 ** While reducing the graph, it might add some nodes to the current
 ** solution.
 */
-void reduce(branch_node& n, const vector<double>& weight)
+void reduce(branch_node& n, const vector<cost>& weight)
 {
     // Xiao2021 rule 1
     // if there is a node v such that w(v) > w(N[v]), then add v to the solution
     // and remove all nodes in N[v] from the graph.
     for_nodes(n.g, v) {
-        double neighbor_sum = 0;
+        cost neighbor_sum = 0;
         for_adj(n.g, v, u) {
             neighbor_sum += weight[u];
         }
@@ -235,7 +235,7 @@ void reduce(branch_node& n, const vector<double>& weight)
 
 void branch(stack<branch_node>& tree,
             const branch_node& b_node,
-            const vector<double>& weight)
+            const vector<cost>& weight)
 {
     // find the vertex with max degree in G
     Graph::node const v = b_node.g.get_node_max_degree();
@@ -276,7 +276,7 @@ void branch(stack<branch_node>& tree,
 ** add node (G - N[Sv], sol + v) to the branch-and-bound tree
 ** add node (G - v, sol) to the branch-and-bound tree
 */
-vector<node_set> pricing::solve(const Graph& orig, const vector<double>& weight)
+vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
     Graph g = Graph(orig);

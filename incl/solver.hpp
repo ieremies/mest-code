@@ -10,17 +10,11 @@
 
 class Solver
 {
-  private:
     GRBEnv _env;
-    Solver();
 
   public:
-    double solve(const Graph&, vector<node_set>&, map<node_set, double>&);
-    static Solver& get_instance()
-    {
-        static Solver instance;  // Singleton instance
-        return instance;
-    }
+    Solver();
+    cost solve(const Graph&, vector<node_set>&, map<node_set, cost>&);
 };
 
 #endif  // SOlVER_H

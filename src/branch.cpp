@@ -9,11 +9,11 @@ int visited = 0;
 
 pair<node, node> find_vertexes(const Graph& g,
                                const vector<node_set>& indep_set,
-                               map<node_set, double> x_s)
+                               map<node_set, cost> x_s)
 {
-    const double half = 0.5;
+    const cost half = 0.5;
 
-    vector<vector<double>> diff(g.get_n(), vector<double>(g.get_n(), 0));
+    vector<vector<cost>> diff(g.get_n(), vector<cost>(g.get_n(), 0));
     for (const node_set& set : indep_set) {
         for (node const u : set) {
             CHECK_F(g.is_active(u),
@@ -28,7 +28,7 @@ pair<node, node> find_vertexes(const Graph& g,
         }
     }
 
-    double max = 0;
+    cost max = 0;
     node u = 0;
     node v = 0;
     for_nodes(g, _u)
@@ -52,7 +52,7 @@ pair<node, node> find_vertexes(const Graph& g,
 */
 void Branch::branch(const Graph& g,
                     const vector<node_set>& indep_sets,
-                    const map<node_set, double>& x_s,
+                    const map<node_set, cost>& x_s,
                     const cost& obj_val)
 {
     LOG_SCOPE_F(INFO, "Branch::Branch");
@@ -65,7 +65,8 @@ void Branch::branch(const Graph& g,
     tree.push(Branch::node {false, false, obj_val, u, v, indep_sets});
 }
 
-vector<node_set> clean_sets(const mod_type& t,
+vector<node_set> clean_sets(const Graph& g,
+                            const mod_type& t,
                             const vector<node_set>& indep_sets,
                             const node& u,
                             const node& v)
@@ -82,10 +83,20 @@ vector<node_set> clean_sets(const mod_type& t,
             ret.push_back(set);
         }
     }
-    // FIXME there is a problem when a node is in no set.
-    if (t == mod_type::contract) {
-        ret.push_back({u});
+
+    // Make sure that all nodes are present in at least one set
+    vector<bool> is_present = vector<bool>(g.get_n(), false);
+    for (node_set const& set : ret) {
+        for (node const x : set) {
+            is_present[x] = true;
+        }
     }
+    for_nodes(g, i) {
+        if (not is_present[i]) {
+            ret.push_back({i});
+        }
+    }
+
     return ret;
 }
 
@@ -152,7 +163,7 @@ vector<node_set> Branch::next(Graph& g, const cost& upper_bound)
     g.change(t, n.u, n.v);
     tree.push(n);
 
-    vector<node_set> ret = clean_sets(t, n.indep_sets, n.u, n.v);
+    vector<node_set> ret = clean_sets(g, t, n.indep_sets, n.u, n.v);
     DCHECK_F(check_indep_sets(g, ret), "not independent set");
 
     visited++;

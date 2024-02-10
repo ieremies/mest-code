@@ -1,5 +1,3 @@
-#include <algorithm>
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -72,28 +70,28 @@ int main(int argc, char** argv)
     cost upper_bound = heuristic(*g, indep_sets);
     enrich(*g, indep_sets);
 
-    cost sol = 0;
-    map<node_set, double> x_s;
-
+    Solver solver = Solver();
     Branch tree;
 
-    do {
-        x_s.clear();
-        sol = Solver::get_instance().solve(*g, indep_sets, x_s);
+    while (!indep_sets.empty()) {
+        map<node_set, cost> x_s;
+
+        cost const sol = solver.solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
 
         if (integral(x_s) and sol + EPS < upper_bound) {
             upper_bound = sol;
-            log_solution(*g, x_s, sol);
-        } else if (ceil(sol) < upper_bound) {
+            log_solution(*g, indep_sets, x_s, sol);
+        }
+
+        if (ceil(sol) < upper_bound) {
             tree.branch(*g, indep_sets, x_s, sol);
         }
 
         indep_sets = tree.next(*g, upper_bound);
+    }
 
-    } while (!indep_sets.empty());
-
-    LOG_F(WARNING, "Upper bound: %Lf", upper_bound);
+    LOG_F(WARNING, "Solved with: %Lf", upper_bound);
 
     delete g;
 
