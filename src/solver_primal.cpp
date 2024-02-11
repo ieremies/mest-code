@@ -103,6 +103,7 @@ cost Solver::solve(const Graph& g,
               model.get(GRB_DoubleAttr_ObjVal));
 
         // get the weights of the nodes from the dual variables
+        // TODO I have to round this values.
         for_nodes(g, v) {
             weight[v] = constrs[v].get(GRB_DoubleAttr_Pi);
         }
