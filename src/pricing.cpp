@@ -1,117 +1,358 @@
-#include "../incl/pricing.hpp"
+#include <algorithm>
+#include <stack>
 
-#include <gurobi_c++.h>
+#include "pricing.hpp"
 
 #include "../incl/utils.hpp"
 
-// maximize     x_v weight_v
-// subjected to x_v + x_w <= 1 for all edges (v,w)
-//              x_v binary for all nodes v
-vector<node_set> pricing::solve(const Graph& g, const vector<cost>& weight)
+struct mwis_sol
+{
+    cost value;
+    node_set nodes;
+};
+
+struct branch_node
+{
+    Graph g;
+    mwis_sol sol;
+};
+
+/*
+** Heuristic to, given the current solution and graph, find a solution MWIS.
+*/
+mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
+{
+    Graph g = Graph(n.g);
+    mwis_sol sol = n.sol;
+
+    while (not g.is_empty()) {
+        cost max_weight = 0;
+        Graph::node max_node = 0;
+        for_nodes(g, u) {
+            if (weight[u] > max_weight) {
+                max_weight = weight[u];
+                max_node = u;
+            }
+        }
+
+        sol.value += max_weight;
+        sol.nodes.insert(max_node);
+        node_set const onu = g.get_closed_neighborhood(max_node);
+        for (Graph::node const u : onu) {
+            g.deactivate(u);
+        }
+    }
+
+    return sol;
+}
+/*
+** Function that computes the weight of a set of nodes.
+*/
+cost w(const node_set& s, const vector<cost>& weight)
+{
+    cost sum = 0;
+    for (node const u : s) {
+        sum += weight[u];
+    }
+    return sum;
+}
+
+template<typename T>
+constexpr std::set<T> set_intersection(const std::set<T>& a,
+                                       const std::set<T>& b)
+{
+    std::set<T> inter;
+    std::set_intersection(a.begin(),
+                          a.end(),
+                          b.begin(),
+                          b.end(),
+                          std::inserter(inter, inter.begin()));
+    return inter;
+}
+
+template<typename T>
+constexpr std::set<T> set_difference(const std::set<T>& a, const std::set<T>& b)
+{
+    std::set<T> inter;
+    std::set_difference(a.begin(),
+                        a.end(),
+                        b.begin(),
+                        b.end(),
+                        std::inserter(inter, inter.begin()));
+    return inter;
+}
+
+/*
+** Function that computes the confining set of a node v.
+** Returns an empty set if the node is unconfined.
+*/
+node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
+{
+    node_set s = {v};
+
+    // while S has an extending child u:
+    // add u to S
+    while (true) {
+        node_set const ons = g.get_open_neighborhood(s);
+        node satellite = g.get_n();
+        for (node const u : ons) {
+            // child : w[u] >= w( S \cap N(u))
+            node_set const onu = g.get_open_neighborhood(u);
+            node_set const inter = set_intersection(s, onu);
+            if (weight[u] < w(inter, weight)) {
+                continue;
+            }
+            // ext.child : child and
+            //             |N(u) \ S| = 1 and
+            //             w(u) < w(N(u) \ N(S))
+            node_set const diff1 = set_difference(onu, s);
+            if (diff1.size() != 1) {
+                continue;
+            }
+            node_set const diff2 = set_difference(onu, ons);
+            if (weight[u] >= w(diff2, weight)) {
+                continue;
+            }
+            satellite = *diff1.begin();
+            break;
+        }
+        if (satellite == g.get_n()) {
+            break;
+        }
+        s.insert(satellite);
+    }
+
+    // if there is a child u of S such that w(u) >= w(N(u) \ S), then
+    // return {}
+    node_set const ons = g.get_open_neighborhood(s);
+    for (node const u : ons) {
+        // if it is not child, continue
+        node_set const onu = g.get_open_neighborhood(u);
+        node_set const inter = set_intersection(s, onu);
+        if (weight[u] < w(inter, weight)) {
+            continue;
+        }
+
+        node_set const diff = set_difference(onu, ons);
+        if (weight[u] >= w(diff, weight)) {
+            return {};
+        }
+    }
+
+    return s;
+}
+
+/*
+** Xiao2021 indicates the algorithm of Lamm2018 for Weighted Clique Cover.
+** Lamm2018 notes that this algorithm produces a higher WCC than the
+** method of Brelaz (see Brelaz1976 and Akiba2016)
+**
+** "We begin by sorting the vertices in descending order of their weight
+** (ties are broken by selecting the vertex with higher degree). Next,
+** we initiate an empty set of cliques C. We then iterate over the sorted
+** vertices and search for the clique with maximum weight which it can
+** be added to. If there are no candidates for insertion, we insert a new
+** single vertex clique to C and assign it the weight of the vertex.
+** Afterwards the vertex is marked as processed and we continue with the
+** next one." -- Lamm2018, page6
+*/
+cost mwis_ub(const branch_node n, const vector<cost>& weight)
+{
+    // sort the vertices in descending order of their weight
+    vector<Graph::node> sorted_nodes = {};
+    for_nodes(n.g, u) {
+        sorted_nodes.push_back(u);
+    }
+    std::sort(sorted_nodes.begin(),
+              sorted_nodes.end(),
+              [&n, &weight](Graph::node a, Graph::node b)
+              {
+                  if (weight[a] == weight[b]) {
+                      return n.g.get_degree(a) > n.g.get_degree(b);
+                  }
+                  return weight[a] > weight[b];
+              });
+
+    // iterate over the sorted vertices and search for the clique with
+    // maximum weight which it can be added to.
+    vector<pair<node_set, cost>> cliques = {};
+    cost wcc = 0;
+    for (Graph::node const u : sorted_nodes) {
+        pair<node_set, cost>* max_clique = nullptr;
+        node_set const onu = n.g.get_open_neighborhood(u);
+        for (pair<node_set, cost>& clique : cliques) {
+            if (clique.first == onu
+                and (max_clique == nullptr
+                     or clique.second > max_clique->second))
+            {
+                max_clique = &clique;
+            }
+        }
+        if (max_clique == nullptr) {
+            cliques.push_back({{u}, weight[u]});
+            wcc += weight[u];
+        } else {
+            max_clique->first.insert(u);
+        }
+    }
+
+    return wcc;
+}
+
+/*
+** Xiao2021 rule 1
+** if there is a node v such that w(v) > w(N[v]), then add v to the solution
+** and remove all nodes in N[v] from the graph.
+**/
+void xiao2021_rule1(branch_node& n, const vector<cost>& weight)
+{
+    for_nodes(n.g, v) {
+        cost neighbor_sum = 0;
+        for_adj(n.g, v, u) {
+            neighbor_sum += weight[u];
+        }
+        if (weight[v] <= neighbor_sum) {
+            continue;
+        }
+        n.sol.value += weight[v];
+        n.sol.nodes.insert(v);
+        node_set const onu = n.g.get_closed_neighborhood(v);
+        for (Graph::node const u : onu) {
+            n.g.deactivate(u);
+        }
+    }
+}
+
+/*
+** Xiao2021 rule 5
+** If a vertex is unconfinaded, remove it from the graph.
+*/
+void xiao2021_rule5(branch_node& n, const vector<cost>& weight)
+{
+    for_nodes(n.g, v) {
+        node_set const conf = confine(n.g, v, weight);
+        if (conf.empty()) {
+            n.g.deactivate(v);
+        }
+    }
+}
+
+/*
+** Function to apply certain reducion techniques to the graph.
+**
+** While reducing the graph, it might add some nodes to the current
+** solution.
+*/
+void reduce(branch_node& n, const vector<cost>& weight)
+{
+    xiao2021_rule1(n, weight);
+    xiao2021_rule5(n, weight);
+}
+
+/*
+** Function that determines wheter or not to branch.
+** If so, add the branch to the "tree" (stack).
+*/
+void branch(stack<branch_node>& tree,
+            const branch_node& b_node,
+            const vector<cost>& weight)
+{
+    // find the vertex with max degree in G
+    Graph::node const v = b_node.g.get_node_max_degree();
+    node_set const confining_set = confine(b_node.g, v, weight);
+
+    // Branching 1 : add the confining
+    Graph g1 = Graph(b_node.g);
+    for (Graph::node const u : g1.get_closed_neighborhood(confining_set)) {
+        g1.deactivate(u);
+    }
+
+    mwis_sol sol1 = {b_node.sol.value, b_node.sol.nodes};
+    for (Graph::node const u : confining_set) {
+        sol1.value += weight[u];
+        sol1.nodes.insert(u);
+    }
+
+    if (not g1.is_empty()) {
+        tree.push({g1, sol1});
+    }
+
+    // Branching 2 : delete v
+    Graph g2 = Graph(b_node.g);
+    g2.deactivate(v);
+    if (not g2.is_empty()) {
+        tree.push({g2, b_node.sol});
+    }
+}
+
+/*
+** while there is a branch-and-bound node to be searched
+** get the next one
+** G, sol <- reduce(G, w)
+** actual = sol + greedy(G, w)
+** best <- max{best, actual}
+** if actual <= best, then continue
+** v <- the vertex with max degree in G
+** add node (G - N[Sv], sol + v) to the branch-and-bound tree
+** add node (G - v, sol) to the branch-and-bound tree
+*/
+vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
+    Graph g = Graph(orig);
+    vector<node_set> new_indep_sets = {};
 
-    // Count number of 1 and 0 in the weight vector.
-    size_t n_1 = 0;
-    size_t n_0 = 0;
-    for (cost w : weight) {
-        if (w > 1 - EPS) {
-            n_1++;
-        }
-        if (w < EPS) {
-            n_0++;
-        }
-    }
-    LOG_F(INFO,
-          "%lu nodes with weight 1, %lu nodes with weight 0, %lu with decimal "
-          "ones.",
-          n_1,
-          n_0,
-          g.get_n() - n_1 - n_0);
-
-    GRBEnv env = GRBEnv(true);
-    env.set(GRB_IntParam_LogToConsole, 0);
-    env.set(GRB_IntParam_OutputFlag, 0);
-    if (SINGLE_THREAD) {
-        env.set(GRB_IntParam_Threads, 1);
-    }
-    env.start();
-
-    cost lower_bound = 0;
+    // Remove all nodes with weight 0
     for_nodes(g, n) {
-        cost dom = weight[n];
-        for_adj(g, n, u) {
-            if (n != u) {
-                dom += weight[u];
-            }
-        }
-        lower_bound = weight[n] * weight[n] / dom;
-    }
-    LOG_F(INFO, "Lower bound: %Lf", lower_bound);
-
-    // Maximize model.
-    GRBModel pricing_model(env);
-    pricing_model.set(GRB_IntAttr_ModelSense, GRB_MAXIMIZE);
-    // TODO Get multiple solutions.
-    // pricing_model.set(GRB_IntParam_SolutionLimit, 16 * g.get_n());
-    // pricing_model.set(GRB_IntParam_PoolSearchMode, 0);
-
-    // x_v is 1 if v is selected, 0 otherwise.
-    vector<GRBVar> x(g.get_n());
-    for_nodes(g, n) {
-        x[n] = pricing_model.addVar(
-            0.0, 1.0, weight[n], GRB_BINARY, "x_" + to_string(n));
-    }
-
-    pricing_model.update();
-
-    // No adjacent nodes in g are both selected.
-    for_nodes(g, n1) {
-        for_nodes(g, n2) {
-            if (g.get_adjacency(n1, n2) > 0) {
-                pricing_model.addConstr(
-                    x[n1] + x[n2] <= 1,
-                    "edge " + to_string(n1) + " " + to_string(n2));
-            }
+        if (weight[n] < 0 + EPS) {
+            g.deactivate(n);
         }
     }
 
-    pricing_model.optimize();
+    stack<branch_node> tree;
+    tree.push({g, {0, {}}});
+    mwis_sol best = {0, {}};
 
-    vector<node_set> sets = {};
+    while (!tree.empty()) {
+        branch_node b_node = tree.top();
+        tree.pop();
 
-    // While we can find a set with weight > 1.
-    while (pricing_model.get(GRB_CostAttr_ObjVal) >= 1 + EPS) {
-        // Retrive the found set.
-        node_set set;
-        for_nodes(g, n) {
-            if (x[n].get(GRB_DoubleAttr_X) > 0.5) {
-                set.insert(n);
-            }
+        // reduce b_node.g and may populate solution b_node.sol
+        reduce(b_node, weight);
+        if (b_node.g.is_empty()) {
+            continue;
         }
-        LOG_F(1,
-              "Princing with cost %f, set %s.",
-              pricing_model.get(GRB_DoubleAttr_ObjVal),
-              to_string(set).c_str());
 
-        sets.push_back(set);
+        // TODO Xiao2023 says we can use some algorithm when the graph is small
+        // to quickly find the MWIS.
 
-        // element with max weight in the set chosen
-        double max_weight = -1;
-        int max_weight_node = -1;
-        for (node n : set) {
-            if (x[n].get(GRB_DoubleAttr_X) > 0.5 && weight[n] > max_weight) {
-                max_weight = weight[n];
-                max_weight_node = n;
+        mwis_sol const heu_sol = mwis_heu(b_node, weight);
+
+        // BUG Caso o código entre em laço infinito, conferir se esse EPS é
+        // maior que o EPS dado ao Gurobi.
+        if (heu_sol.value > 1 + EPS) {
+            // check if is not aldready in new_indep_set
+            if (find(
+                    new_indep_sets.begin(), new_indep_sets.end(), heu_sol.nodes)
+                != new_indep_sets.end())
+            {
+                continue;
             }
+            new_indep_sets.push_back(heu_sol.nodes);
         }
-        // Remove it and solve again.
-        pricing_model.addConstr(x[max_weight_node] == 0,
-                                "remove " + to_string(max_weight_node));
-        pricing_model.optimize();
+
+        if (heu_sol.value > best.value) {
+            best = heu_sol;
+        }
+
+        if (mwis_ub(b_node, weight) <= best.value) {
+            continue;
+        }
+
+        branch(tree, b_node, weight);
     }
 
-    LOG_F(INFO, "%lu new sets.", sets.size());
+    // TODO expand those independent sets to be maximal
 
-    return sets;
+    return new_indep_sets;
 }

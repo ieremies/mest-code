@@ -29,7 +29,7 @@ void log_solution(const Graph& g,
             sets_sol.push_back(set);
         }
     }
-    // g.apply_changes_to_sol(indep_sets);
+    g.apply_changes_to_sol(sets_sol);
     string log = "SOL: %f = ";
     for (const auto& s : sets_sol) {
         log += to_string(s) + " ";
@@ -41,7 +41,7 @@ bool integral(const map<node_set, cost>& x_s)
 {
     for (const auto& [s, x] : x_s) {
         if (0 + EPS < x and x < 1 - EPS) {
-            LOG_F(INFO, "not integer %Lf", x);
+            LOG_F(INFO, "Not integer %Lf", x);
             return false;
         }
     }
@@ -50,34 +50,9 @@ bool integral(const map<node_set, cost>& x_s)
 
 void maximal_set(const Graph& g, node_set& s)
 {
-    vector<bool> visited(g.get_n(), false);
-    for (const auto& v : s) {
-        visited[v] = true;
-        for_adj(g, v, n) {
-            visited[n] = true;
-        }
-    }
-    // while some one is not visited
-    // get the one with the least degree
-    // add to the set and mark him and its neighbors as visited
-    while (find(visited.begin(), visited.end(), false) != visited.end()) {
-        int min_degree = g.get_n();
-        int min_v = -1;
-        for (int v = 0; v < g.get_n(); v++) {
-            if (visited[v]) {
-                continue;
-            }
-            if (g.get_degree(v) < min_degree) {
-                min_degree = g.get_degree(v);
-                min_v = v;
-            }
-        }
-        s.insert(min_v);
-        visited[min_v] = true;
-        for_adj(g, min_v, n) {
-            visited[n] = true;
-        }
-    }
+    // This function can extend to be a maximal, but it needs to take
+    // care into adding vertexis that may incur in a cut, subtracting
+    // the cuts dual variable value and making it not vialoted (>1).
 }
 
 bool is_all_active(const Graph& g, const node_set& s)

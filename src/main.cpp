@@ -16,6 +16,7 @@ void config_logging(int argc, char** argv)
     loguru::g_preamble_thread = false;
     loguru::g_preamble_time = false;
     loguru::g_stderr_verbosity = 0;
+    loguru::g_flush_interval_ms = 100;
     loguru::init(argc, argv);
     loguru::add_file(
         "log.log", loguru::FileMode::Truncate, loguru::Verbosity_MAX);
@@ -31,7 +32,7 @@ int main(int argc, char** argv)
 
     vector<node_set> indep_sets;
     cost upper_bound = heuristic(*g, indep_sets);
-    enrich(*g, indep_sets);
+    // enrich(*g, indep_sets);
 
     Solver solver = Solver();
     Branch tree;

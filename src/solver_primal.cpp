@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -14,7 +13,6 @@ Solver::Solver()
     : _env(true)
 {
     // disable gurobi license output
-    _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
     _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
     _env.set(GRB_DoubleParam_OptimalityTol, EPS);
     _env.set(GRB_IntParam_LogToConsole, 0);
@@ -27,6 +25,10 @@ Solver::Solver()
     _env.start();
 }
 
+/*
+** Add a new variable to the model and update the list of independent sets.
+** We also need to compute in which constraints this variable will be used.
+*/
 void add_variable(GRBModel& model,
                   map<node_set, GRBVar>& vars,
                   vector<GRBConstr>& constrs,
@@ -49,10 +51,6 @@ void add_variable(GRBModel& model,
     indep_sets.push_back(set);
 }
 
-/*
-** min \sum x_s
-** st  \sum{v \in s} x_s >= 1 \forall v
-*/
 cost Solver::solve(const Graph& g,
                    vector<node_set>& indep_sets,
                    map<node_set, cost>& x_s)
@@ -76,8 +74,7 @@ cost Solver::solve(const Graph& g,
 
     model.update();
 
-    // For each vertice, the sum of the variables of the indep set it is in
-    // should be greater then 1
+    // For each vertice, it has to covered by at least one set
     vector<GRBConstr> constrs = vector<GRBConstr>(g.get_n());
     for_nodes(g, v) {
         GRBLinExpr c = 0;
