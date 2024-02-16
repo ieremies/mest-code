@@ -7,6 +7,7 @@
 
 int visited = 0;
 
+// TODO Conferir regra para definir em qual vértice dar branch
 pair<node, node> find_vertexes(const Graph& g,
                                const vector<node_set>& indep_set,
                                map<node_set, cost> x_s)

@@ -300,7 +300,7 @@ Graph::node Graph::next_act_node(node u) const
 
 void Graph::log() const
 {
-    LOG_F(INFO, "Graph: %d nodes, %lu edges", n, m);
+    // LOG_F(INFO, "Graph: %d nodes, %lu edges", n, m);
     for (node u = 0; u < n; u++) {
         if (!is_active(u)) {
             continue;

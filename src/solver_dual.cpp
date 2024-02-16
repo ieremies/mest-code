@@ -44,6 +44,7 @@ void add_constrain(GRBModel& model,
     for (const node& n : set) {
         c += var[n];
     }
+
     HANDLE_GRB_EXCEPTION(constrs[set] = model.addConstr(c <= 1.0));
 
     indep_sets.push_back(set);
