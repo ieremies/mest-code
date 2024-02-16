@@ -103,7 +103,6 @@ cost Solver::solve(const Graph& g,
               model.get(GRB_DoubleAttr_ObjVal));
 
         // get the weights of the nodes from the dual variables
-        // TODO I have to round this values.
         for_nodes(g, v) {
             weight[v] = constrs[v].get(GRB_DoubleAttr_Pi);
         }
@@ -129,5 +128,12 @@ cost Solver::solve(const Graph& g,
         x_s[set] = vars[set].get(GRB_DoubleAttr_X);
     }
 
-    return model.get(GRB_DoubleAttr_ObjVal);
+    // Return the dual objective solution
+    cost sum = 0;
+    for_nodes(g, u) {
+        sum += EPS * floor(weight[u] / EPS);
+    }
+    // TODO no caso de variáveis de corte, isso deve ser ceil
+    // conferir o paper do Lotti
+    return sum;
 }
