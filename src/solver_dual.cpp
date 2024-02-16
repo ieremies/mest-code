@@ -13,7 +13,6 @@ Solver::Solver()
     : _env(true)
 {
     // disable gurobi license output
-    _env.set(GRB_DoubleParam_TimeLimit, TIMELIMIT);
     _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
     _env.set(GRB_DoubleParam_OptimalityTol, EPS);
     _env.set(GRB_IntParam_LogToConsole, 0);

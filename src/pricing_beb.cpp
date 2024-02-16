@@ -79,6 +79,7 @@ constexpr std::set<T> set_difference(const std::set<T>& a, const std::set<T>& b)
                         std::inserter(inter, inter.begin()));
     return inter;
 }
+// TODO a porra tem que estarem ordenados
 
 /*
 ** Function that computes the confining set of a node v.
@@ -306,6 +307,8 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
 
         mwis_sol const heu_sol = mwis_heu(b_node, weight);
 
+        // TODO garantir que o EPS aqui é maior que o do gurobi para evitar
+        // infinito todo conjunto gerado tem que entrar na base
         if (heu_sol.value > 1 + EPS) {
             // check if is not aldready in new_indep_set
             if (find(

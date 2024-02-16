@@ -23,7 +23,20 @@ cost heuristic(const Graph& graph, vector<node_set>& indep_sets)
     node atual = 0;
 
     while (true) {
-        atual = max_element(sat_deg.begin(), sat_deg.end()) - sat_deg.begin();
+        // Find the node with the highest saturation degree, breaking ties by
+        // the highest degree.
+        atual = std::max_element(
+                    sat_deg.begin(),
+                    sat_deg.end(),
+                    [](const pair<int, int>& a, const pair<int, int>& b)
+                    {
+                        if (a.first == b.first) {
+                            return a.second < b.second;
+                        }
+                        return a.first < b.first;
+                    })
+            - sat_deg.begin();
+
         if (sat_deg[atual].first < 0) {
             break;
         }
