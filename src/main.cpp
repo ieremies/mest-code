@@ -32,7 +32,9 @@ int main(int argc, char** argv)
 
     vector<node_set> indep_sets;
     cost upper_bound = heuristic(*g, indep_sets);
-    // enrich(*g, indep_sets);
+    enrich(*g, indep_sets);
+    // TODO quando a instância for densa, usar clique (mas isso é raro)
+    // TODO usar independance number para achar um lb
 
     Solver solver = Solver();
     Branch tree;

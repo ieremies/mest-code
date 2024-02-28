@@ -34,23 +34,59 @@
 
 using namespace std;
 using color = unsigned int;
-// TODO talvez isso esteja ficando mais lento
-using cost = long double;
+using cost = long double;  // might not be necessary
 
-string to_string(const node_set&);
+// === DIMACS functions =======================================================
+Graph* read_dimacs_instance(const string& filename);
+
+// === Log functions ==========================================================
 void log_solution(const Graph& g,
                   const vector<node_set>& indep_sets,
                   map<node_set, cost>& x_s,
                   const cost& sol);
-bool integral(const map<node_set, cost>&);
-void maximal_set(const Graph&, node_set&);
-bool check_indep_sets(const Graph&, const vector<node_set>&);
-void enrich(const Graph& g, vector<node_set>& indep_sets);
-Graph* read_dimacs_instance(const string& filename);
+void log_graph_stats(const Graph& g, const string& name);
 
+// === Check functions ========================================================
+bool integral(const map<node_set, cost>&);
+bool check_indep_set(const Graph&, const node_set&);
+bool check_indep_sets(const Graph&, const vector<node_set>&);
+
+// === Graph functions ========================================================
+void maximal_set(const Graph&, node_set&);
+void enrich(const Graph& g, vector<node_set>& indep_sets);
+
+// === String functions =======================================================
+string to_string(const node_set&);
 inline string to_string(const mod_type& t)
 {
     return t == mod_type::contract ? "contract" : "conflict";
+}
+
+// === Template functions =====================================================
+template<typename T>
+inline constexpr std::set<T> set_intersection(const std::set<T>& a,
+                                              const std::set<T>& b)
+{
+    std::set<T> inter;
+    std::set_intersection(a.begin(),
+                          a.end(),
+                          b.begin(),
+                          b.end(),
+                          std::inserter(inter, inter.begin()));
+    return inter;
+}
+
+template<typename T>
+inline constexpr std::set<T> set_difference(const std::set<T>& a,
+                                            const std::set<T>& b)
+{
+    std::set<T> diff;
+    std::set_difference(a.begin(),
+                        a.end(),
+                        b.begin(),
+                        b.end(),
+                        std::inserter(diff, diff.begin()));
+    return diff;
 }
 
 #endif  // UTILS_H
