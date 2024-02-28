@@ -5,6 +5,8 @@
 
 #include "../incl/utils.hpp"
 
+#define MAX_GENERATED_SET 100
+
 string to_string(const node_set& set)
 {
     string s = "{";
@@ -48,11 +50,21 @@ bool integral(const map<node_set, cost>& x_s)
     return true;
 }
 
-void maximal_set(const Graph& g, node_set& s)
+void maximal_set(const Graph& orig, node_set& s)
 {
-    // This function can extend to be a maximal, but it needs to take
-    // care into adding vertexis that may incur in a cut, subtracting
-    // the cuts dual variable value and making it not vialoted (>1).
+    Graph g = Graph(orig);
+    for (node const u : g.get_closed_neighborhood(s)) {
+        g.deactivate(u);
+    }
+
+    while (not g.is_empty()) {
+        node const n = g.get_node_min_degree();
+        s.insert(n);
+        for_adj(g, n, u) {
+            g.deactivate(u);
+        }
+        g.deactivate(n);
+    }
 }
 
 bool is_all_active(const Graph& g, const node_set& s)
@@ -66,41 +78,47 @@ bool is_all_active(const Graph& g, const node_set& s)
     return true;
 }
 
-bool check_indep_sets(const Graph& g, const vector<node_set>& indep_sets)
+bool check_indep_set(const Graph& g, const node_set& set)
 {
-    for (const node_set& set : indep_sets) {
-        if (not is_all_active(g, set)) {
-            return false;
-        }
-        for (node const u : set) {
-            for (node const v : set) {
-                if (g.get_adjacency(u, v) != 0) {
-                    LOG_F(ERROR, "%d %d are not independent", u, v);
-                    return false;
-                }
+    for (node const u : set) {
+        for (node const v : set) {
+            if (g.get_adjacency(u, v) != 0) {
+                return false;
             }
         }
     }
     return true;
 }
 
-/*
-** The idea is to create some usefull independent sets.
-** - maximal independent set starting with each vertex
-** - maximal independent set starting with a pair of non-adj vertexes.
-** - remove one element from a independnet set
-**    not sure what
-*/
+bool check_indep_sets(const Graph& g, const vector<node_set>& indep_sets)
+{
+    for (const node_set& set : indep_sets) {
+        if (not is_all_active(g, set)) {
+            return false;
+        }
+        if (!check_indep_set(g, set)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void enrich(const Graph& g, vector<node_set>& indep_sets)
 {
+    LOG_SCOPE_FUNCTION(INFO);
     for (node_set set : indep_sets) {
         maximal_set(g, set);
     }
-    for_nodes(g, u) {
-        node_set s = {u};
-        maximal_set(g, s);
-        indep_sets.push_back(s);
-    }
+    // int i = 0;
+    // for_nodes(g, u) {
+    //     node_set s = {u};
+    //     maximal_set(g, s);
+    //     indep_sets.push_back(s);
+    //     i++;
+    //     if (i > MAX_GENERATED_SET) {
+    //         break;
+    //     }
+    // }
 }
 
 Graph* read_dimacs_instance(const string& filename)
@@ -120,21 +138,38 @@ Graph* read_dimacs_instance(const string& filename)
     auto* g = new Graph(n_vertices);
 
     // add edges to the graph
+    int zero_indexed = 1;
+    vector<pair<int, int>> edges;
     for (int i = 0; i < m_edges; i++) {
         int u = 0;
         int v;
         getline(infile, line);
         (void)sscanf(line.c_str(), "e %d %d", &u, &v);
-        // if filename ends with .col, then the vertices are numbered from 1
-        if (filename.substr(filename.size() - 4) == ".col") {
-            g->add_edge(u - 1, v - 1);
-        } else {
-            g->add_edge(u, v);
+        if (u == 0 or v == 0) {
+            zero_indexed = 0;
         }
+        edges.push_back({u, v});
     }
+
+    // add edges to the graph
+    for (const auto& [u, v] : edges) {
+        g->add_edge(u - zero_indexed, v - zero_indexed);
+    }
+
     LOG_F(INFO,
           "Read instance with %d vertexes and %lu edges",
           g->get_n(),
           g->get_m());
     return g;
+}
+
+void log_graph_stats(const Graph& g, const string& name)
+{
+    LOG_F(INFO,
+          "%s: %d nodes, %lu edges, density %.2f, max degree: %d.",
+          name.c_str(),
+          g.get_active_n(),
+          g.get_m(),
+          (g.get_m() / (g.get_n() * (g.get_n() - 1) / 2.0)) * 100,
+          g.get_degree(g.get_node_max_degree()));
 }

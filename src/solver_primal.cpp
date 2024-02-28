@@ -35,9 +35,10 @@ void add_variable(GRBModel& model,
                   vector<node_set>& indep_sets,
                   const node_set& set)
 {
-    DCHECK_F(vars.find(set) == vars.end(),
-             "The set %s is already in the list.",
-             to_string(set).c_str());
+    if (vars.find(set) != vars.end()) {
+        LOG_F(ERROR, "Skipping set already exists.");
+        return;
+    }
 
     GRBColumn col;
     for (const node& n : set) {
@@ -116,7 +117,6 @@ cost Solver::solve(const Graph& g,
         for (const node_set& set : sets) {
             add_variable(model, vars, constrs, indep_sets, set);
         }
-        LOG_F(INFO, "Added %d sets.", (int)sets.size());
     }
 
     LOG_F(INFO, "Final model with %d sets.", (int)indep_sets.size());

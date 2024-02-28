@@ -48,6 +48,7 @@ mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
 /*
 ** Function that computes the weight of a set of nodes.
 */
+// TODO Passar toda a ideia de peso para dentro do Graph
 cost w(const node_set& s, const vector<cost>& weight)
 {
     cost sum = 0;
@@ -57,37 +58,13 @@ cost w(const node_set& s, const vector<cost>& weight)
     return sum;
 }
 
-template<typename T>
-constexpr std::set<T> set_intersection(const std::set<T>& a,
-                                       const std::set<T>& b)
-{
-    std::set<T> inter;
-    std::set_intersection(a.begin(),
-                          a.end(),
-                          b.begin(),
-                          b.end(),
-                          std::inserter(inter, inter.begin()));
-    return inter;
-}
-
-template<typename T>
-constexpr std::set<T> set_difference(const std::set<T>& a, const std::set<T>& b)
-{
-    std::set<T> inter;
-    std::set_difference(a.begin(),
-                        a.end(),
-                        b.begin(),
-                        b.end(),
-                        std::inserter(inter, inter.begin()));
-    return inter;
-}
-
 /*
 ** Function that computes the confining set of a node v.
 ** Returns an empty set if the node is unconfined.
 */
 node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
 {
+    // TODO Refazer isso com o novo algoritmo de Xiao2023
     node_set s = {v};
 
     // while S has an extending child u:
@@ -138,6 +115,8 @@ node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
             return {};
         }
     }
+
+    DCHECK_F(check_indep_set(g, s), "Confining set is not independent.");
 
     return s;
 }
@@ -254,12 +233,20 @@ void reduce(branch_node& n, const vector<cost>& weight)
 ** If so, add the branch to the "tree" (stack).
 */
 void branch(stack<branch_node>& tree,
-            const branch_node& b_node,
+            branch_node& b_node,
             const vector<cost>& weight)
 {
-    // find the vertex with max degree in G
-    Graph::node const v = b_node.g.get_node_max_degree();
-    node_set const confining_set = confine(b_node.g, v, weight);
+    // find the vertex with max degree in G, if it is not confined, remove it.
+    node_set confining_set;
+    Graph::node v = 0;
+    while (true) {
+        v = b_node.g.get_node_max_degree();
+        confining_set = confine(b_node.g, v, weight);
+        if (not confining_set.empty()) {
+            break;
+        }
+        b_node.g.deactivate(v);
+    }
 
     // Branching 1 : add the confining
     Graph g1 = Graph(b_node.g);
@@ -304,32 +291,33 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
 
     // Remove all nodes with weight 0
     for_nodes(g, n) {
-        if (weight[n] < 0 + EPS) {
+        if (weight[n] <= 0) {
             g.deactivate(n);
         }
     }
+
+    log_graph_stats(g, "Original");
+    log_graph_stats(g, "Reduced");
 
     stack<branch_node> tree;
     tree.push({g, {0, {}}});
     mwis_sol best = {0, {}};
 
+    int count = 0;
     while (!tree.empty()) {
+        count++;
         branch_node b_node = tree.top();
         tree.pop();
 
         // reduce b_node.g and may populate solution b_node.sol
         reduce(b_node, weight);
-        if (b_node.g.is_empty()) {
-            continue;
-        }
 
         // TODO Xiao2023 says we can use some algorithm when the graph is small
         // to quickly find the MWIS.
 
         mwis_sol const heu_sol = mwis_heu(b_node, weight);
 
-        // BUG Caso o código entre em laço infinito, conferir se esse EPS é
-        // maior que o EPS dado ao Gurobi.
+        // BUG Caso infinito, conferir se EPS é maior que o EPS dado ao Gurobi.
         if (heu_sol.value > 1 + EPS) {
             // check if is not aldready in new_indep_set
             if (find(
@@ -344,15 +332,23 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
         if (heu_sol.value > best.value) {
             best = heu_sol;
         }
-
+        if (b_node.g.is_empty()) {
+            continue;
+        }
         if (mwis_ub(b_node, weight) <= best.value) {
             continue;
         }
 
         branch(tree, b_node, weight);
     }
+    LOG_F(INFO, "MWIS solved with value %Lf | %d branchs.", best.value, count);
 
-    // TODO expand those independent sets to be maximal
+    LOG_SCOPE_F(INFO, "Maximal set.");
+    for (node_set& s : new_indep_sets) {
+        maximal_set(g, s);
+    }
+
+    LOG_F(INFO, "Found %lu independent sets violated.", new_indep_sets.size());
 
     return new_indep_sets;
 }

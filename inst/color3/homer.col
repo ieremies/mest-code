@@ -1,7 +1,7 @@
 c FILE: homer.col
 c Translated from Stanford GraphBase File: homer.gb
 c Stanford GraphBase ID: book(?homer?,561,0,1,24,0,0,0)
-p edge 561 3258
+p edge 561 3256
 e 1 452
 e 1 447
 e 1 549

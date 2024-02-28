@@ -1,12 +1,14 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
+#include <bitset>
 #include <set>
 #include <stack>
 #include <string>
 #include <utility>
 #include <vector>
 
+#define MAX_NODES 10000
 #define for_nodes(G, u) \
     for (node u = G.first_act_node(); u < G.get_n(); u = G.next_act_node(u))
 #define for_edges(G, e) \
@@ -43,12 +45,14 @@ class Graph
 
     // === Getters ===========================================
     node get_n() const;  // number of active nodes
+    node get_active_n() const;
     bool is_empty() const;
-    unsigned long int get_m() const;  // FIXME this function is not clear
+    unsigned long int get_m() const;
 
     node get_degree(node) const;
     node get_node_max_degree() const;
-    bool is_active(node) const;
+    node get_node_min_degree() const;
+    inline bool is_active(node u) const { return active[u]; }
 
     /*
      * @brief Get the number of edges beteween two nodes. If either are
@@ -80,6 +84,8 @@ class Graph
     unsigned long int add_edge(node, node);
     unsigned long int remove_edge(node, node);
 
+    void k_core(int);
+
     void log() const;
     void apply_changes_to_sol(vector<set<Graph::node>>&) const;
 
@@ -88,9 +94,10 @@ class Graph
     unsigned long int m;
     vector<mod> delta;
     vector<node> deg;
-    vector<bool> active;
+    bitset<MAX_NODES> active;
     // BUG For some instances, this can be not enough
     vector<vector<node>> adj;
+    vector<bitset<MAX_NODES>> adj_bool;
 
     void do_conflict(node, node);
     void undo_conflict(node, node);

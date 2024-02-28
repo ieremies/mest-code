@@ -17,11 +17,11 @@ pair<node, node> find_vertexes(const Graph& g,
     vector<vector<cost>> diff(g.get_n(), vector<cost>(g.get_n(), 0));
     for (const node_set& set : indep_set) {
         for (node const u : set) {
-            CHECK_F(g.is_active(u),
-                    "node that is not active is in indep sets.");
+            DCHECK_F(g.is_active(u),
+                     "node that is not active is in indep sets.");
             for (node const v : set) {
-                CHECK_F(g.is_active(v),
-                        "node that is not active is in indep sets.");
+                DCHECK_F(g.is_active(v),
+                         "node that is not active is in indep sets.");
                 if (u < v) {
                     diff[u][v] += half - abs(half - x_s.at(set));
                 }
