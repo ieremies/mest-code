@@ -14,7 +14,7 @@ class Solver
 
   public:
     Solver();
-    cost solve(const Graph&, vector<node_set>&, map<node_set, cost>&);
+    cost solve(Graph&, vector<node_set>&, map<node_set, cost>&);
 };
 
 #endif  // SOlVER_H

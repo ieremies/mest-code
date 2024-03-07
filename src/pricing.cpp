@@ -20,7 +20,7 @@ struct branch_node
 /*
 ** Heuristic to, given the current solution and graph, find a solution MWIS.
 */
-mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
+mwis_sol mwis_heu(const branch_node& n)
 {
     Graph g = Graph(n.g);
     mwis_sol sol = n.sol;
@@ -29,8 +29,8 @@ mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
         cost max_weight = 0;
         Graph::node max_node = 0;
         for_nodes(g, u) {
-            if (weight[u] > max_weight) {
-                max_weight = weight[u];
+            if (n.g.get_weight(u) > max_weight) {
+                max_weight = n.g.get_weight(u);
                 max_node = u;
             }
         }
@@ -45,24 +45,12 @@ mwis_sol mwis_heu(const branch_node& n, const vector<cost>& weight)
 
     return sol;
 }
-/*
-** Function that computes the weight of a set of nodes.
-*/
-// TODO Passar toda a ideia de peso para dentro do Graph
-cost w(const node_set& s, const vector<cost>& weight)
-{
-    cost sum = 0;
-    for (node const u : s) {
-        sum += weight[u];
-    }
-    return sum;
-}
 
 /*
 ** Function that computes the confining set of a node v.
 ** Returns an empty set if the node is unconfined.
 */
-node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
+node_set confine(const Graph& g, Graph::node v)
 {
     // TODO Refazer isso com o novo algoritmo de Xiao2023
     node_set s = {v};
@@ -76,7 +64,7 @@ node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
             // child : w[u] >= w( S \cap N(u))
             node_set const onu = g.get_open_neighborhood(u);
             node_set const inter = set_intersection(s, onu);
-            if (weight[u] < w(inter, weight)) {
+            if (g.get_weight(u) < g.get_weight(inter)) {
                 continue;
             }
             // ext.child : child and
@@ -87,7 +75,7 @@ node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
                 continue;
             }
             node_set const diff2 = set_difference(onu, ons);
-            if (weight[u] >= w(diff2, weight)) {
+            if (g.get_weight(u) >= g.get_weight(diff2)) {
                 continue;
             }
             satellite = *diff1.begin();
@@ -106,12 +94,12 @@ node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
         // if it is not child, continue
         node_set const onu = g.get_open_neighborhood(u);
         node_set const inter = set_intersection(s, onu);
-        if (weight[u] < w(inter, weight)) {
+        if (g.get_weight(u) < g.get_weight(inter)) {
             continue;
         }
 
         node_set const diff = set_difference(onu, ons);
-        if (weight[u] >= w(diff, weight)) {
+        if (g.get_weight(u) >= g.get_weight(diff)) {
             return {};
         }
     }
@@ -135,7 +123,7 @@ node_set confine(const Graph& g, Graph::node v, const vector<cost>& weight)
 ** Afterwards the vertex is marked as processed and we continue with the
 ** next one." -- Lamm2018, page6
 */
-cost mwis_ub(const branch_node n, const vector<cost>& weight)
+cost mwis_ub(const branch_node n)
 {
     // sort the vertices in descending order of their weight
     vector<Graph::node> sorted_nodes = {};
@@ -144,12 +132,12 @@ cost mwis_ub(const branch_node n, const vector<cost>& weight)
     }
     std::sort(sorted_nodes.begin(),
               sorted_nodes.end(),
-              [&n, &weight](Graph::node a, Graph::node b)
+              [&n](Graph::node a, Graph::node b)
               {
-                  if (weight[a] == weight[b]) {
+                  if (n.g.get_weight(a) == n.g.get_weight(b)) {
                       return n.g.get_degree(a) > n.g.get_degree(b);
                   }
-                  return weight[a] > weight[b];
+                  return n.g.get_weight(a) > n.g.get_weight(b);
               });
 
     // iterate over the sorted vertices and search for the clique with
@@ -168,8 +156,8 @@ cost mwis_ub(const branch_node n, const vector<cost>& weight)
             }
         }
         if (max_clique == nullptr) {
-            cliques.push_back({{u}, weight[u]});
-            wcc += weight[u];
+            cliques.push_back({{u}, n.g.get_weight(u)});
+            wcc += n.g.get_weight(u);
         } else {
             max_clique->first.insert(u);
         }
@@ -183,17 +171,17 @@ cost mwis_ub(const branch_node n, const vector<cost>& weight)
 ** if there is a node v such that w(v) > w(N[v]), then add v to the solution
 ** and remove all nodes in N[v] from the graph.
 **/
-void xiao2021_rule1(branch_node& n, const vector<cost>& weight)
+void xiao2021_rule1(branch_node& n)
 {
     for_nodes(n.g, v) {
         cost neighbor_sum = 0;
         for_adj(n.g, v, u) {
-            neighbor_sum += weight[u];
+            neighbor_sum += n.g.get_weight(u);
         }
-        if (weight[v] <= neighbor_sum) {
+        if (n.g.get_weight(v) < neighbor_sum) {
             continue;
         }
-        n.sol.value += weight[v];
+        n.sol.value += n.g.get_weight(v);
         n.sol.nodes.insert(v);
         node_set const onu = n.g.get_closed_neighborhood(v);
         for (Graph::node const u : onu) {
@@ -206,10 +194,10 @@ void xiao2021_rule1(branch_node& n, const vector<cost>& weight)
 ** Xiao2021 rule 5
 ** If a vertex is unconfinaded, remove it from the graph.
 */
-void xiao2021_rule5(branch_node& n, const vector<cost>& weight)
+void xiao2021_rule5(branch_node& n)
 {
     for_nodes(n.g, v) {
-        node_set const conf = confine(n.g, v, weight);
+        node_set const conf = confine(n.g, v);
         if (conf.empty()) {
             n.g.deactivate(v);
         }
@@ -217,31 +205,36 @@ void xiao2021_rule5(branch_node& n, const vector<cost>& weight)
 }
 
 /*
+** For every degree 1 node (v):
+** remove its neighbor (u) if w(u) <= w(v)
+** otherwise, update w(u) := w(u) - w(v) and remove v
+*/
+void xaiao2021_rule10_deg1(branch_node& n) {}
+
+/*
 ** Function to apply certain reducion techniques to the graph.
 **
 ** While reducing the graph, it might add some nodes to the current
 ** solution.
 */
-void reduce(branch_node& n, const vector<cost>& weight)
+void reduce(branch_node& n)
 {
-    xiao2021_rule1(n, weight);
-    xiao2021_rule5(n, weight);
+    xiao2021_rule1(n);
+    xiao2021_rule5(n);
 }
 
 /*
 ** Function that determines wheter or not to branch.
 ** If so, add the branch to the "tree" (stack).
 */
-void branch(stack<branch_node>& tree,
-            branch_node& b_node,
-            const vector<cost>& weight)
+void branch(stack<branch_node>& tree, branch_node& b_node)
 {
     // find the vertex with max degree in G, if it is not confined, remove it.
     node_set confining_set;
     Graph::node v = 0;
     while (true) {
         v = b_node.g.get_node_max_degree();
-        confining_set = confine(b_node.g, v, weight);
+        confining_set = confine(b_node.g, v);
         if (not confining_set.empty()) {
             break;
         }
@@ -256,7 +249,7 @@ void branch(stack<branch_node>& tree,
 
     mwis_sol sol1 = {b_node.sol.value, b_node.sol.nodes};
     for (Graph::node const u : confining_set) {
-        sol1.value += weight[u];
+        sol1.value += b_node.g.get_weight(u);
         sol1.nodes.insert(u);
     }
 
@@ -283,7 +276,7 @@ void branch(stack<branch_node>& tree,
 ** add node (G - N[Sv], sol + v) to the branch-and-bound tree
 ** add node (G - v, sol) to the branch-and-bound tree
 */
-vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
+vector<node_set> pricing::solve(const Graph& orig)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
     Graph g = Graph(orig);
@@ -291,7 +284,7 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
 
     // Remove all nodes with weight 0
     for_nodes(g, n) {
-        if (weight[n] <= 0) {
+        if (g.get_weight(n) <= 0) {
             g.deactivate(n);
         }
     }
@@ -310,12 +303,12 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
         tree.pop();
 
         // reduce b_node.g and may populate solution b_node.sol
-        reduce(b_node, weight);
+        reduce(b_node);
 
         // TODO Xiao2023 says we can use some algorithm when the graph is small
         // to quickly find the MWIS.
 
-        mwis_sol const heu_sol = mwis_heu(b_node, weight);
+        mwis_sol const heu_sol = mwis_heu(b_node);
 
         // BUG Caso infinito, conferir se EPS é maior que o EPS dado ao Gurobi.
         if (heu_sol.value > 1 + EPS) {
@@ -335,11 +328,11 @@ vector<node_set> pricing::solve(const Graph& orig, const vector<cost>& weight)
         if (b_node.g.is_empty()) {
             continue;
         }
-        if (mwis_ub(b_node, weight) <= best.value) {
+        if (mwis_ub(b_node) <= best.value) {
             continue;
         }
 
-        branch(tree, b_node, weight);
+        branch(tree, b_node);
     }
     LOG_F(INFO, "MWIS solved with value %Lf | %d branchs.", best.value, count);
 

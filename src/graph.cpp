@@ -12,6 +12,7 @@ Graph::Graph(int nnodes)
     , deg(n, 0)
     , adj(n, vector<node>(n, 0))
     , adj_bool(n, 0)
+    , weights(n, 0.0)
 {
     active.set();
 }
@@ -25,6 +26,7 @@ Graph::Graph(const Graph& g)
     , active(g.active)
     , adj(g.adj)
     , adj_bool(g.adj_bool)
+    , weights(g.weights)
 {
 }
 
@@ -481,4 +483,64 @@ void Graph::k_core(int k)
             }
         }
     }
+}
+
+// Transform the graph into its complement
+void Graph::complement()
+{
+    for (node u = 0; u < n; u++) {
+        if (not is_active(u)) {
+            continue;
+        }
+        adj_bool[u].flip();
+    }
+}
+
+bool Graph::is_connected() const
+{
+    bitset<MAX_NODES> visited(0);
+    node_set to_visit;
+    for (node u = 0; u < n; u++) {
+        if (is_active(u)) {
+            to_visit.insert(u);
+            break;
+        }
+    }
+    while (not to_visit.empty()) {
+        node const u = *to_visit.begin();
+        to_visit.erase(u);
+        visited[u] = true;
+        for (node v = 0; v < n; v++) {
+            if (get_adjacency(u, v) > 0 and not visited[v]) {
+                to_visit.insert(v);
+            }
+        }
+    }
+    return visited.count() == get_active_n();
+}
+
+bool Graph::is_connected_complement() const
+{
+    Graph g(*this);
+    g.complement();
+    return g.is_connected();
+}
+
+void Graph::set_weight(const node& u, const double& w)
+{
+    weights[u] = w;
+}
+
+double Graph::get_weight(const node& u) const
+{
+    return weights[u];
+}
+
+double Graph::get_weight(const node_set& s) const
+{
+    double w = 0;
+    for (const auto& u : s) {
+        w += get_weight(u);
+    }
+    return w;
 }

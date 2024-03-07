@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
     vector<node_set> indep_sets;
     cost upper_bound = heuristic(*g, indep_sets);
-    enrich(*g, indep_sets);
+    // enrich(*g, indep_sets);
     // TODO quando a instância for densa, usar clique (mas isso é raro)
     // TODO usar independance number para achar um lb
 
@@ -41,6 +41,11 @@ int main(int argc, char** argv)
 
     while (!indep_sets.empty()) {
         map<node_set, cost> x_s;
+
+#ifndef NDEBUG
+        check_connectivity(*g);
+        check_universal(*g);
+#endif
 
         cost const sol = solver.solve(*g, indep_sets, x_s);
         LOG_F(INFO, "Solved with value %Lf", sol);
@@ -57,7 +62,7 @@ int main(int argc, char** argv)
         indep_sets = tree.next(*g, upper_bound);
     }
 
-    LOG_F(WARNING, "Solved with: %Lf", upper_bound);
+    LOG_F(INFO, "Solved with: %Lf", upper_bound);
 
     delete g;
 

@@ -75,7 +75,7 @@ cost heuristic(const Graph& graph, vector<node_set>& indep_sets)
     for (node_set const& s : indep_sets) {
         log += to_string(s) + " ";
     }
-    LOG_F(WARNING, log.c_str(), (double)indep_sets.size());
+    LOG_F(INFO, log.c_str(), (double)indep_sets.size());
 
     return res;
 }

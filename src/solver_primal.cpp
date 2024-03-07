@@ -52,7 +52,7 @@ void add_variable(GRBModel& model,
     indep_sets.push_back(set);
 }
 
-cost Solver::solve(const Graph& g,
+cost Solver::solve(Graph& g,
                    vector<node_set>& indep_sets,
                    map<node_set, cost>& x_s)
 {
@@ -91,7 +91,6 @@ cost Solver::solve(const Graph& g,
     LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
 
     // === Solve the model ===
-    vector<cost> weight(g.get_n());
     while (true) {
         HANDLE_GRB_EXCEPTION(model.optimize());
 
@@ -102,10 +101,10 @@ cost Solver::solve(const Graph& g,
 
         // get the weights of the nodes from the dual variables
         for_nodes(g, v) {
-            weight[v] = constrs[v].get(GRB_DoubleAttr_Pi);
+            g.set_weight(v, constrs[v].get(GRB_DoubleAttr_Pi));
         }
 
-        vector<node_set> const sets = pricing::solve(g, weight);
+        vector<node_set> const sets = pricing::solve(g);
 
         if (sets.empty()) {
             LOG_F(INFO, "No more sets to add.");
@@ -128,7 +127,7 @@ cost Solver::solve(const Graph& g,
     // Return the dual objective solution
     cost sum = 0;
     for_nodes(g, u) {
-        sum += EPS * floor(weight[u] / EPS);
+        sum += EPS * floor(g.get_weight(u) / EPS);
     }
     // TODO no caso de variáveis de corte, isso deve ser ceil
     // conferir o paper do Lotti

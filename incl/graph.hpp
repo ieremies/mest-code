@@ -89,6 +89,14 @@ class Graph
     void log() const;
     void apply_changes_to_sol(vector<set<Graph::node>>&) const;
 
+    bool is_connected() const;
+    bool is_connected_complement() const;
+
+    // === Weighted functions ================================
+    void set_weight(const node&, const double&);
+    double get_weight(const node&) const;
+    double get_weight(const node_set&) const;
+
   private:
     node n;
     unsigned long int m;
@@ -98,6 +106,7 @@ class Graph
     // BUG For some instances, this can be not enough
     vector<vector<node>> adj;
     vector<bitset<MAX_NODES>> adj_bool;
+    vector<double> weights;
 
     void do_conflict(node, node);
     void undo_conflict(node, node);
@@ -105,6 +114,7 @@ class Graph
     void undo_contract(node, node);
     node check_deg(node) const;
     bool check_all_deg() const;
+    void complement();
 };
 
 using node_set = Graph::node_set;

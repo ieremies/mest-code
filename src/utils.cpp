@@ -36,7 +36,7 @@ void log_solution(const Graph& g,
     for (const auto& s : sets_sol) {
         log += to_string(s) + " ";
     }
-    LOG_F(WARNING, log.c_str(), sol);
+    LOG_F(INFO, log.c_str(), sol);
 }
 
 bool integral(const map<node_set, cost>& x_s)
@@ -172,4 +172,29 @@ void log_graph_stats(const Graph& g, const string& name)
           g.get_m(),
           (g.get_m() / (g.get_n() * (g.get_n() - 1) / 2.0)) * 100,
           g.get_degree(g.get_node_max_degree()));
+}
+
+bool check_connectivity(const Graph& g)
+{
+    if (not g.is_connected()) {
+        LOG_F(WARNING, "Graph is not connected!.");
+        return false;
+    }
+    if (not g.is_connected_complement()) {
+        LOG_F(WARNING, "Graph complement is not connected!.");
+        return false;
+    }
+    return true;
+}
+
+bool check_universal(const Graph& g)
+{
+    bool res = false;
+    for_nodes(g, u) {
+        if (g.get_degree(u) == g.get_active_n() - 1) {
+            LOG_F(WARNING, "Node %d is universal.", u);
+            res = true;
+        }
+    }
+    return res;
 }

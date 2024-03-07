@@ -2,6 +2,7 @@
 
 #define UTILS_H
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -50,6 +51,8 @@ void log_graph_stats(const Graph& g, const string& name);
 bool integral(const map<node_set, cost>&);
 bool check_indep_set(const Graph&, const node_set&);
 bool check_indep_sets(const Graph&, const vector<node_set>&);
+bool check_connectivity(const Graph&);
+bool check_universal(const Graph&);
 
 // === Graph functions ========================================================
 void maximal_set(const Graph&, node_set&);
