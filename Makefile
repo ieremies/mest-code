@@ -1,3 +1,4 @@
+.phony: all
 HOMEDIR  = .
 
 SYSTEM 	:= $(shell uname -s)
@@ -7,7 +8,7 @@ CC_ARGS  = -march=native -std=c++17
 CC_LIB   = -lm -lpthread -ldl
 
 # All is the debug version
-all: CC_ARGS += -g -Werror -Og
+all: CC_ARGS += -g -Werror # -Og
 all: executable
 
 release: CC_ARGS += -O3 -DNDEBUG
@@ -43,16 +44,16 @@ INC = $(GUROBI_INC) $(LOGURU_INC) -I$(HOMEDIR_INC)
 LIB = $(CC_LIB) $(GUROBI_LIB) -L$(HOMEDIR_LIB)
 
 _EX = main.cpp
-_SR = pricing.cpp utils.cpp branch.cpp graph.cpp dsatur.cpp main.cpp
+_SR = $(notdir $(wildcard $(HOMEDIR_SRC)/*.cpp))
 _OB = $(_SR:.cpp=.o) loguru.o
-_BN = $(_EX:.cpp=.e) # all executables
+_BN = $(_EX:.cpp=.e)
 
 # Complete paths
 _SRC = $(patsubst %,$(HOMEDIR_SRC)/%,$(_EX))
 _OBJ = $(patsubst %,$(HOMEDIR_OBJ)/%,$(_OB))
 _BIN = $(patsubst %,$(HOMEDIR_BIN)/%,$(_BN))
 
-executable: primal.e dual.e
+executable: primal.e # dual.e
 
 primal.e: $(HOMEDIR_OBJ)/solver_primal.o $(_OBJ)
 	$(CC) $(CC_ARGS) $(CC_WARN) $^ -o $(HOMEDIR_BIN)/$@ $(LIB) $(INC)

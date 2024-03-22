@@ -1,9 +1,9 @@
 #ifndef HEURISTIC_H
 #define HEURISTIC_H
 
-#include "../incl/graph.hpp"
-#include "../incl/utils.hpp"
+#include "graph.hpp"
+#include "utils.hpp"
 
-cost heuristic(const Graph&, vector<node_set>&);
+color_sol heuristic(const graph&);
 
 #endif  // HEURISTIC_H

@@ -70,6 +70,10 @@ ForEachMacros:
   - foreach
   - for_nodes
   - for_adj
+  - for_indep_set
+  - for_indep_set_with
+  - for_cut
+  - for_pair_nodes
   - Q_FOREACH
   - BOOST_FOREACH
 IncludeBlocks: Regroup

@@ -4,11 +4,10 @@
 
 #include "../incl/utils.hpp"
 
-// ==================== Graph ====================
-Graph::Graph(int nnodes)
+// ==================== graph ====================
+graph::graph(int nnodes)
     : n(nnodes)
     , m(0)
-    , delta()
     , deg(n, 0)
     , adj(n, vector<node>(n, 0))
     , adj_bool(n, 0)
@@ -17,25 +16,59 @@ Graph::Graph(int nnodes)
     active.set();
 }
 
-// copy constructor
-Graph::Graph(const Graph& g)
-    : n(g.n)
-    , m(g.m)
-    , delta(g.delta)
-    , deg(g.deg)
-    , active(g.active)
-    , adj(g.adj)
-    , adj_bool(g.adj_bool)
-    , weights(g.weights)
+graph::graph(const string& filename)
+    : n(0)
+    , m(0)
 {
+    active.set();
+
+    ifstream infile(filename);
+    string line;
+
+    do {
+        getline(infile, line);
+    } while (line[0] != 'p');
+
+    // format line
+    char _[10];
+    sscanf(line.c_str(), "p %s %hd %ld", _, &n, &m);
+
+    adj = vector<vector<node>>(n, vector<node>(n, 0));
+    deg = vector<node>(n, 0);
+    adj_bool = vector<bitset<max_nodes>>(n, 0);
+    weights = vector<double>(n, 0.0);
+
+    // add edges to the graph
+    int zero_indexed = 1;
+    vector<pair<int, int>> edges;
+    for (unsigned long i = 0; i < m; i++) {
+        int u = 0;
+        int v = 0;
+        getline(infile, line);
+        (void)sscanf(line.c_str(), "e %d %d", &u, &v);
+        if (u == 0 or v == 0) {
+            zero_indexed = 0;
+        }
+        edges.emplace_back(u, v);
+    }
+
+    // add edges to the graph
+    for (const auto& [u, v] : edges) {
+        add_edge(u - zero_indexed, v - zero_indexed);
+    }
+
+    LOG_F(INFO, "Graph created with %d nodes and %lu edges.", n, m);
 }
 
-Graph::node Graph::get_n() const
+// copy constructor
+graph::graph(const graph& g) = default;
+
+graph::node graph::get_n() const
 {
     return n;
 }
 
-Graph::node Graph::get_active_n() const
+graph::node graph::get_active_n() const
 {
     node count = 0;
     for (node i = 0; i < n; i++) {
@@ -46,7 +79,7 @@ Graph::node Graph::get_active_n() const
     return count;
 }
 
-unsigned long int Graph::get_m() const
+unsigned long int graph::get_m() const
 {
     // FIXME I can save this info and not recompute every time.
     unsigned long int count = 0;
@@ -62,7 +95,7 @@ unsigned long int Graph::get_m() const
     return count / 2;
 }
 
-bool Graph::is_empty() const
+bool graph::is_empty() const
 {
     for (node i = 0; i < n; i++) {
         if (active[i]) {
@@ -72,7 +105,7 @@ bool Graph::is_empty() const
     return true;
 }
 
-Graph::node Graph::check_deg(node u) const
+graph::node graph::check_deg(node u) const
 {
     node count = 0;
     for (node v = 0; v < n; v++) {
@@ -83,7 +116,7 @@ Graph::node Graph::check_deg(node u) const
     return count;
 }
 
-Graph::node Graph::get_degree(node u) const
+graph::node graph::get_degree(node u) const
 {
     if (not is_active(u)) {
         return 0;
@@ -96,7 +129,7 @@ Graph::node Graph::get_degree(node u) const
     return deg[u];
 }
 
-bool Graph::check_all_deg() const
+bool graph::check_all_deg() const
 {
     for (node u = 0; u < n; u++) {
         (void)get_degree(u);
@@ -104,7 +137,7 @@ bool Graph::check_all_deg() const
     return true;
 }
 
-Graph::node Graph::get_node_max_degree() const
+graph::node graph::get_node_max_degree() const
 {
     node max = 0;
     node max_deg = 0;
@@ -121,7 +154,7 @@ Graph::node Graph::get_node_max_degree() const
     return max;
 }
 
-Graph::node Graph::get_node_min_degree() const
+graph::node graph::get_node_min_degree() const
 {
     node min = 0;
     node min_deg = n;
@@ -138,7 +171,7 @@ Graph::node Graph::get_node_min_degree() const
     return min;
 }
 
-Graph::node Graph::get_adjacency(node u, node v) const
+graph::node graph::get_adjacency(node u, node v) const
 {
     if (not is_active(u) or not is_active(v) or u == v) {
         return 0;
@@ -156,19 +189,19 @@ Graph::node Graph::get_adjacency(node u, node v) const
     return adj[u][v];
 }
 
-void Graph::do_conflict(node u, node v)
+void graph::do_conflict(node u, node v)
 {
     LOG_F(INFO, "Doing conflict %d %d.", u, v);
     add_edge(u, v);
 }
 
-void Graph::undo_conflict(node u, node v)
+void graph::undo_conflict(node u, node v)
 {
     LOG_F(INFO, "Undoing conflict %d %d.", u, v);
     remove_edge(u, v);
 }
 
-void Graph::deactivate(node u)
+void graph::deactivate(node u)
 {
     if (not is_active(u)) {
         return;  // nothing to do
@@ -191,7 +224,7 @@ void Graph::deactivate(node u)
     DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
-void Graph::do_contract(node u, node v)
+void graph::do_contract(node u, node v)
 {
     // v will be deactivated and adj[v] should be kept unchanged.
     // u will be added all v's edges
@@ -226,7 +259,7 @@ void Graph::do_contract(node u, node v)
     DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
-void Graph::undo_contract(node u, node v)
+void graph::undo_contract(node u, node v)
 {
     DCHECK_F(is_active(u), "Interacting with inactive node.");
     LOG_F(INFO, "Undoing contract %d %d.", u, v);
@@ -259,7 +292,7 @@ void Graph::undo_contract(node u, node v)
     DCHECK_F(check_all_deg(), "Degree is not consistent.");
 }
 
-void Graph::change(mod_type t, node u, node v)
+void graph::change(mod_type t, node u, node v)
 {
     DCHECK_F(active[u] && active[v], "Interacting with inactive nodes.");
     DCHECK_F(u != v, "Cannoct act with equal nodes.");
@@ -273,7 +306,7 @@ void Graph::change(mod_type t, node u, node v)
     delta.push_back(mod {t, u, v});
 }
 
-void Graph::undo(mod_type tc, node uc, node vc)
+void graph::undo(mod_type tc, node uc, node vc)
 {
     DCHECK_F(uc != vc, "Cannot act with equal nodes.");
     DCHECK_F(active[uc], "Interacting with inactive node.");
@@ -290,7 +323,7 @@ void Graph::undo(mod_type tc, node uc, node vc)
     delta.pop_back();
 }
 
-unsigned long int Graph::add_edge(node u, node v)
+unsigned long int graph::add_edge(node u, node v)
 {
     DCHECK_F(
         active[u] && active[v], "Interacting with inactive nodes %d %d", u, v);
@@ -310,7 +343,7 @@ unsigned long int Graph::add_edge(node u, node v)
     return m;
 }
 
-unsigned long int Graph::remove_edge(node u, node v)
+unsigned long int graph::remove_edge(node u, node v)
 {
     DCHECK_F(active[u] && active[v], "Interacting with inactive nodes");
     DCHECK_F(u != v, "Cannoct act with equal nodes.");
@@ -330,12 +363,12 @@ unsigned long int Graph::remove_edge(node u, node v)
     return m;
 }
 
-Graph::node Graph::first_act_node() const
+graph::node graph::first_act_node() const
 {
     return next_act_node(-1);
 }
 
-Graph::node Graph::next_act_node(node u) const
+graph::node graph::next_act_node(node u) const
 {
     for (node i = u + 1; i < n; i++) {
         if (is_active(i)) {
@@ -345,26 +378,38 @@ Graph::node Graph::next_act_node(node u) const
     return n;
 }
 
-void Graph::log() const
+void graph::log() const
 {
-    // LOG_F(INFO, "Graph: %d nodes, %lu edges", n, m);
+    log_stats("Graph");
     for (node u = 0; u < n; u++) {
         if (!is_active(u)) {
             continue;
         }
-        LOG_F(INFO, "Node %d: %d edges", u, deg[u]);
+        // Node %d : [deg: %d | adj: %s]
+        string s = "Node " + to_string(u)
+            + " : [deg: " + to_string(get_degree(u)) + " | adj: ";
         for (node v = 0; v < n; v++) {
-            if (!is_active(v)) {
-                continue;
-            }
             if (get_adjacency(u, v) > 0) {
-                LOG_F(INFO, "     |-- %d: %d", v, adj[u][v]);
+                s += to_string(v) + " ";
             }
         }
+        s += "]";
+        LOG_F(INFO, "%s", s.c_str());
     }
 }
 
-void Graph::apply_changes_to_sol(vector<node_set>& indep_sets) const
+void graph::log_stats(const string& name) const
+{
+    LOG_F(INFO,
+          "%s: %d nodes, %lu edges, density %.2f, max degree: %d.",
+          name.c_str(),
+          get_active_n(),
+          get_m(),
+          (get_m() / (get_n() * (get_n() - 1) / 2.0)) * 100,
+          get_degree(get_node_max_degree()));
+}
+
+void graph::apply_changes_to_sol(vector<node_set>& indep_sets) const
 {
     // iterate over delta in reverse order
     for (auto it = delta.rbegin(); it != delta.rend(); ++it) {
@@ -381,12 +426,12 @@ void Graph::apply_changes_to_sol(vector<node_set>& indep_sets) const
     }
 }
 
-Graph::node Graph::first_adj_node(node u) const
+graph::node graph::first_adj_node(node u) const
 {
     return next_adj_node(u, -1);
 }
 
-Graph::node Graph::next_adj_node(node u, node v) const
+graph::node graph::next_adj_node(node u, node v) const
 {
     for (node i = v + 1; i < n; i++) {
         if (get_adjacency(u, i) > 0) {
@@ -396,12 +441,12 @@ Graph::node Graph::next_adj_node(node u, node v) const
     return n;
 }
 
-Graph::edge Graph::first_edge() const
+graph::edge graph::first_edge() const
 {
     return next_edge({-1, -1});
 }
 
-Graph::edge Graph::next_edge(edge e) const
+graph::edge graph::next_edge(edge e) const
 {
     for (node u = e.first; u < n; u++) {
         for (node v = e.second + 1; v < n; v++) {
@@ -413,9 +458,9 @@ Graph::edge Graph::next_edge(edge e) const
     return {n, n};
 }
 // ==================== Neighborhood function ====================
-node_set Graph::get_closed_neighborhood(const node_set& s) const
+node_set graph::get_closed_neighborhood(const node_set& s) const
 {
-    bitset<MAX_NODES> ret(0);
+    bitset<max_nodes> ret(0);
     // do the OR of adj_bool[u] for all u in s
     for (const auto& u : s) {
         ret |= adj_bool[u];
@@ -432,15 +477,15 @@ node_set Graph::get_closed_neighborhood(const node_set& s) const
     return ret_set;
 }
 
-node_set Graph::get_closed_neighborhood(const node& u) const
+node_set graph::get_closed_neighborhood(const node& u) const
 {
     node_set const ret = {u};
     return get_closed_neighborhood(ret);
 }
 
-node_set Graph::get_open_neighborhood(const node_set& s) const
+node_set graph::get_open_neighborhood(const node_set& s) const
 {
-    bitset<MAX_NODES> ret(0);
+    bitset<max_nodes> ret(0);
     // do the OR of adj_bool[u] for all u in s
     for (const auto& u : s) {
         ret |= adj_bool[u];
@@ -457,13 +502,13 @@ node_set Graph::get_open_neighborhood(const node_set& s) const
     return ret_set;
 }
 
-node_set Graph::get_open_neighborhood(const node& u) const
+node_set graph::get_open_neighborhood(const node& u) const
 {
     node_set const ret = {u};
     return get_open_neighborhood(ret);
 }
 
-void Graph::k_core(int k)
+void graph::k_core(int k)
 {
     bool changed = true;
     while (changed) {
@@ -486,7 +531,7 @@ void Graph::k_core(int k)
 }
 
 // Transform the graph into its complement
-void Graph::complement()
+void graph::complement()
 {
     for (node u = 0; u < n; u++) {
         if (not is_active(u)) {
@@ -496,9 +541,9 @@ void Graph::complement()
     }
 }
 
-bool Graph::is_connected() const
+bool graph::is_connected() const
 {
-    bitset<MAX_NODES> visited(0);
+    bitset<max_nodes> visited(0);
     node_set to_visit;
     for (node u = 0; u < n; u++) {
         if (is_active(u)) {
@@ -519,24 +564,24 @@ bool Graph::is_connected() const
     return visited.count() == get_active_n();
 }
 
-bool Graph::is_connected_complement() const
+bool graph::is_connected_complement() const
 {
-    Graph g(*this);
+    graph g(*this);
     g.complement();
     return g.is_connected();
 }
 
-void Graph::set_weight(const node& u, const double& w)
+void graph::set_weight(const node& u, const double& w)
 {
     weights[u] = w;
 }
 
-double Graph::get_weight(const node& u) const
+double graph::get_weight(const node& u) const
 {
     return weights[u];
 }
 
-double Graph::get_weight(const node_set& s) const
+double graph::get_weight(const node_set& s) const
 {
     double w = 0;
     for (const auto& u : s) {

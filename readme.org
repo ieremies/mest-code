@@ -8,8 +8,113 @@ algo que constantemente eu me confundo:
 - Se a solução que eu encontrei é inteira, esse é um novo UB para aquele lado da árvore.
 - Para eu determinar qual é o melhor para aquela subtree, eu tenho que resolver todos os ramos dela.
 
+#+begin_src cpp
+/*
+,** Graph class will keep track of active nodes, theirs adjacency and weights,
+,** but also the modification history.
+,*/
+class Graph {};
 
-* Tarefas:
+/*
+,** A mod is a modification on the original graph and affects two non-adjcent nodes.
+,** We supose those are done in a FIFO manner. Can be of two types: conflict or contract.
+,**
+,** Conflict: add an edge between the nodes
+,** Contract: the first node gets the edges from the second one, which is deactivated.
+,*/
+struct mod
+{
+    mod_type t;
+    node u, v;
+};
+
+/*
+,** A cut is a triple of three nodes which participates in a clique-cut.
+,*/
+struct Cut {
+    node a, b, c;
+};
+/*
+,** A Model contains:
+,** - the graph
+,** - all the generated independent sets (even if invalid)
+,** - all the generated cuts (even if invalid)
+,**
+,** It will also be the one responsible to keep count of
+,** - which vertexes are in a cut
+,** - how many independent sets "cover" each vertex
+,** - for each pair of vertexes, how many independent set both are
+,*/
+class Model {
+    Graph* g;
+    set<indep_set> indep_sets;
+    set<Cut> cuts;
+};
+
+/*
+,** The branch_cut_price function will be the primaryh call for the Branch-Cut-and-Price algorithm.
+,** It will be done so in order to allow for multiple calls in separeted graphs.
+,** Will also be responsible for building the initial model from the graph.
+,**
+,** The main pourpose is to orchestrate the calls to Solver and Branch.
+,*/
+cost branch_cut_price::branch_cut_price(const Graph&);
+
+/*
+,** Solver will be the one to take in a model and build the actual Gurobi's model.
+,** I will keep track of the variables and constrains, but also call Pricer::price
+,** and Cutter::cut, to generate new independent sets and cuts, respectivelly.
+,**
+,** TODO Will I need a env singleton class in order to not recreate an env everytime?
+,**
+,** ATTENTION: The received model might contain sets that are not independent or that have
+,** an inactive node. The same can happen for cuts.
+,*/
+class Solver {
+    // for the primal problem
+    map<indep_set, GRBVar> variables;
+    vector<GRBConst> constrains;
+
+    void add_variable(Model&, const indep_set&);
+    void add_cut(Model&, const cut&);
+};
+
+/*
+,** Pricing will be the one to find independent sets which have a weight greater then 1.
+,** Inside it, we are solving the Maximun Weighted Indpendent Set problem but with a caveat
+,** that not everytime we need to find the maximun (but will need to when proving there are
+,** none with more the 1 of weight).
+,**
+,** The Solver will populate the weights in the Graph, we will need to look into which
+,** nodes are in a cut to start with those.
+,*/
+class Pricing {
+    set<indep_set> price(const Model&, const map<Cut, double>& x_cuts);
+};
+
+/*
+,** Cutter will be the one to find new violated cuts. Will use the similarity index to help
+,** find cliques in the conflict graph of independent sets.
+ ,*/
+class Cutter {
+    set<Cut> cut(const Model&, const map<indep_set, double>& x_indep_set);
+};
+
+/*
+,** The branch class is responsible for storing and "moving" betwen branchs.
+ ,*/
+struct branch_node {
+    node u, v;
+    cost lower_bound;
+};
+class Branch {
+    stack<branch_node> tree;
+
+    void next(Graph&, cost upper_bound);
+    void branch(const Model&, cost current_sol);
+};
+#+end_src
+
 
 
 * Instances
@@ -17,45 +122,3 @@ All the instances used are under the folder =inst=. The subfolder are used to sp
 - =cmu= https://mat.tepper.cmu.edu/COLOR/instances.html
 - =hugo= https://www.cs.upc.edu/~hhernandez/graphcoloring/home.html
 - =cedric= http://cedric.cnam.fr/~porumbed/graphs/
-
-* About maximal independent sets
-We only care about maximal (insertion-wise) independent sets.
-If we find a feasible solution with only maximal independent sets, it may have some vertices in more then one set.
-We can obtain a solution without that fact heuristically and keeping the number of sets.
-When making sure no set violates the constrains in the dual program, we can be sure that if no maximal independent set can, so does every other independent set.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-- Resolver a RL:
-  - Gero modelo inicial
-  - enquanto o pricing me dá ao menos um conjunto independente, eu otimizo
-  - Quando terminar, eu tenho o ótimo do RL
-  - Viabilizar
-- Se o ótimo é inteiro, legal!
-- Caso contrário, branch

@@ -1,5 +1,4 @@
 #ifndef UTILS_H
-
 #define UTILS_H
 
 #include <algorithm>
@@ -19,10 +18,11 @@
 #    define LOGURU_VERBOSE loguru::Verbosity_MAX
 #endif
 
-#include "../incl/graph.hpp"
-#include "../lib/loguru.hpp"
+#include "graph.hpp"
+#include "loguru.hpp"
 
 #define EPS 1e-9
+#define MAX_GENERATED_SET 100
 
 #define HANDLE_GRB_EXCEPTION(instruction) \
     try { \
@@ -32,37 +32,39 @@
                 e.getErrorCode(), \
                 e.getMessage().c_str()); \
     }
+#define str(x) to_string(x).c_str()
 
+// === Type definitions =======================================================
 using namespace std;
-using color = unsigned int;
-using cost = long double;  // might not be necessary
+using cost = double;
+template<typename T>
+using matrix = vector<vector<T>>;
 
-// === DIMACS functions =======================================================
-Graph* read_dimacs_instance(const string& filename);
+struct color_sol  // might be fractional
+{
+    cost cost = 0.0;
+    map<node_set, double> x_sets;
 
-// === Log functions ==========================================================
-void log_solution(const Graph& g,
-                  const vector<node_set>& indep_sets,
-                  map<node_set, cost>& x_s,
-                  const cost& sol);
-void log_graph_stats(const Graph& g, const string& name);
+    bool is_integral() const;
+    string to_string(const graph&) const;
+};
 
 // === Check functions ========================================================
-bool integral(const map<node_set, cost>&);
-bool check_indep_set(const Graph&, const node_set&);
-bool check_indep_sets(const Graph&, const vector<node_set>&);
-bool check_connectivity(const Graph&);
-bool check_universal(const Graph&);
+bool check_indep_set(const graph&, const node_set&);
+bool check_connectivity(const graph&);
+bool check_universal(const graph&);
 
 // === Graph functions ========================================================
-void maximal_set(const Graph&, node_set&);
-void enrich(const Graph& g, vector<node_set>& indep_sets);
+void maximal_set(const graph&, node_set&);
 
 // === String functions =======================================================
+string to_string(const color_sol&);
 string to_string(const node_set&);
 inline string to_string(const mod_type& t)
 {
-    return t == mod_type::contract ? "contract" : "conflict";
+    return t == mod_type::contract ? "contract"
+        : t == mod_type::conflict  ? "conflict"
+                                   : "none";
 }
 
 // === Template functions =====================================================

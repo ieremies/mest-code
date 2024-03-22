@@ -3,12 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "../incl/branch.hpp"
-#include "../incl/graph.hpp"
-#include "../incl/heuristic.hpp"
-#include "../incl/pricing.hpp"
-#include "../incl/solver.hpp"
-#include "../incl/utils.hpp"
+#include "branch_cut_price.hpp"
+#include "graph.hpp"
+#include "heuristic.hpp"
+#include "utils.hpp"
 
 void config_logging(int argc, char** argv)
 {
@@ -28,43 +26,17 @@ int main(int argc, char** argv)
     config_logging(argc, argv);
 
     // Read the instance and create the graph
-    Graph* g = read_dimacs_instance(argv[1]);
+    graph const g(argv[1]);
 
-    vector<node_set> indep_sets;
-    cost upper_bound = heuristic(*g, indep_sets);
+    color_sol const upper_bound = heuristic(g);
+    LOG_F(INFO, "%s", upper_bound.str(g));
     // enrich(*g, indep_sets);
     // TODO quando a instância for densa, usar clique (mas isso é raro)
     // TODO usar independance number para achar um lb
 
-    Solver solver = Solver();
-    Branch tree;
+    const color_sol res = branch_cut_price::solve(g, upper_bound);
 
-    while (!indep_sets.empty()) {
-        map<node_set, cost> x_s;
-
-#ifndef NDEBUG
-        check_connectivity(*g);
-        check_universal(*g);
-#endif
-
-        cost const sol = solver.solve(*g, indep_sets, x_s);
-        LOG_F(INFO, "Solved with value %Lf", sol);
-
-        if (integral(x_s) and sol + EPS < upper_bound) {
-            upper_bound = sol;
-            log_solution(*g, indep_sets, x_s, sol);
-        }
-
-        if (ceil(sol) < upper_bound) {
-            tree.branch(*g, indep_sets, x_s, sol);
-        }
-
-        indep_sets = tree.next(*g, upper_bound);
-    }
-
-    LOG_F(INFO, "Solved with: %Lf", upper_bound);
-
-    delete g;
+    LOG_F(INFO, "Solved with: %f", res.cost);
 
     return 0;
 }

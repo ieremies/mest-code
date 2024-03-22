@@ -1,16 +1,19 @@
 #include <algorithm>
 
-#include "../incl/heuristic.hpp"
-#include "../incl/utils.hpp"
+#include "heuristic.hpp"
 
-cost heuristic(const Graph& graph, vector<node_set>& indep_sets)
+#include "utils.hpp"
+
+using color = unsigned long;
+
+color_sol heuristic(const graph& graph)
 {
     LOG_SCOPE_FUNCTION(INFO);
 
     // neighbors_color[n] is a vector of bools, where neighbors_color[n][i] is
     // true if node n has a neighbor with color i.
-    vector<vector<bool>> neighbors_colors(graph.get_n(),
-                                          vector<bool>(graph.get_n(), false));
+    matrix<bool> neighbors_colors(graph.get_n(),
+                                  vector<bool>(graph.get_n(), false));
 
     // vector<int> sat_deg(graph.get_n(), 0);
     // sat_deg is a vector pair (saturation degree, vertex degree)
@@ -63,19 +66,18 @@ cost heuristic(const Graph& graph, vector<node_set>& indep_sets)
     }
 
     color const res = *max_element(vertex_color.begin(), vertex_color.end());
-    DLOG_F(INFO, "DSATUR: %d colors", res);
 
     // Create the independent sets
-    indep_sets.resize(res);
+    vector<node_set> indep_sets(res);
     for (node n = 0; n < graph.get_n(); n++) {
         indep_sets[vertex_color[n] - 1].insert(n);
     }
 
-    string log = "SOL: %f = ";
-    for (node_set const& s : indep_sets) {
-        log += to_string(s) + " ";
+    color_sol sol;
+    for (color i = 0; i < res; i++) {
+        sol.x_sets[indep_sets[i]] = 1;
     }
-    LOG_F(INFO, log.c_str(), (double)indep_sets.size());
+    sol.cost = res;
 
-    return res;
+    return sol;
 }

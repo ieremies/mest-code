@@ -2,43 +2,54 @@
 #include <cmath>
 #include <vector>
 
-#include "../incl/solver.hpp"
+#include "solver.hpp"
 
 #include <gurobi_c++.h>
 
-#include "../incl/pricing.hpp"
-#include "../incl/utils.hpp"
+#include "formulation.hpp"
+#include "pricing.hpp"
+#include "utils.hpp"
 
-Solver::Solver()
-    : _env(true)
+solver::solver(formulation& orig)
+    : env(environment::get_env())
+    , form(orig)
+    , grb(env)
+    , constrs(form.get_graph().get_n())
 {
-    // disable gurobi license output
-    _env.set(GRB_DoubleParam_FeasibilityTol, EPS);
-    _env.set(GRB_DoubleParam_OptimalityTol, EPS);
-    _env.set(GRB_IntParam_LogToConsole, 0);
-    _env.set(GRB_IntParam_OutputFlag, 0);
-    _env.set(GRB_IntParam_NumericFocus, 1);
-    // make gurobi use only one thread
-    if (SINGLE_THREAD) {
-        _env.set(GRB_IntParam_Threads, 1);
+    LOG_SCOPE_F(INFO, "Initializing solver.");
+    DCHECK_F(form.get_graph().get_n() > 0, "Graph is empty.");
+    DCHECK_F(form.check_all(), "Formulation is not valid.");
+
+    // === Create the model ================================================
+    grb.set(GRB_IntAttr_ModelSense, GRB_MINIMIZE);
+    grb.set(GRB_IntParam_Presolve, 0);
+    grb.set(GRB_IntParam_Method, 0);
+
+    // Each independent set is a variable
+    for_indep_set(form, s) {
+        vars[s] = grb.addVar(0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS);
     }
-    _env.start();
+
+    grb.update();
+
+    // For each vertice, it has to be covered by at least one set
+    for_nodes(form.get_graph(), v) {
+        GRBLinExpr c = 0;
+        for_indep_set_with(form, v, set) {
+            c += vars[set];
+        }
+        // check if something has been added to c
+        DCHECK_F(c.size() > 0, "No set covers node %d.", v);
+
+        HANDLE_GRB_EXCEPTION(constrs[v] = grb.addConstr(c >= 1.0));
+    }
+
+    LOG_F(INFO, "Initial model with %d sets.", (int)vars.size());
 }
 
-/*
-** Add a new variable to the model and update the list of independent sets.
-** We also need to compute in which constraints this variable will be used.
-*/
-void add_variable(GRBModel& model,
-                  map<node_set, GRBVar>& vars,
-                  vector<GRBConstr>& constrs,
-                  vector<node_set>& indep_sets,
-                  const node_set& set)
+void solver::add_variable(const node_set& set)
 {
-    if (vars.find(set) != vars.end()) {
-        LOG_F(ERROR, "Skipping set already exists.");
-        return;
-    }
+    form.add_indep_set(set);
 
     GRBColumn col;
     for (const node& n : set) {
@@ -46,62 +57,28 @@ void add_variable(GRBModel& model,
     }
 
     HANDLE_GRB_EXCEPTION(
-        vars[set] = model.addVar(0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS, col));
-    model.update();
-
-    indep_sets.push_back(set);
+        vars[set] = grb.addVar(0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS, col));
+    grb.update();
 }
 
-cost Solver::solve(Graph& g,
-                   vector<node_set>& indep_sets,
-                   map<node_set, cost>& x_s)
+color_sol solver::solve()
 {
     LOG_SCOPE_F(INFO, "Solver.");
-    DCHECK_F(g.get_n() > 0, "Graph is empty.");
-    DCHECK_F(check_indep_sets(g, indep_sets), "Invalid independent sets.");
 
-    // === Create the model ===
-    GRBModel model(_env);
-    model.set(GRB_IntAttr_ModelSense, GRB_MINIMIZE);
-    // disable presolve
-    model.set(GRB_IntParam_Presolve, 0);
-    model.set(GRB_IntParam_Method, 0);
-
-    // Each independent set has a variable
-    map<node_set, GRBVar> vars;
-    for (const auto& set : indep_sets) {
-        vars[set] = model.addVar(0.0, GRB_INFINITY, 1.0, GRB_CONTINUOUS);
-    }
-
-    model.update();
-
-    // For each vertice, it has to covered by at least one set
-    vector<GRBConstr> constrs = vector<GRBConstr>(g.get_n());
-    for_nodes(g, v) {
-        GRBLinExpr c = 0;
-        for (const auto& set : indep_sets) {
-            if (set.count(v) > 0) {
-                c += vars[set];
-            }
-        }
-
-        HANDLE_GRB_EXCEPTION(constrs[v] = model.addConstr(c >= 1.0));
-    }
-
-    LOG_F(INFO, "Initial model with %d sets.", (int)indep_sets.size());
-
-    // === Solve the model ===
+    const graph& g = form.get_graph();
     while (true) {
-        HANDLE_GRB_EXCEPTION(model.optimize());
+        HANDLE_GRB_EXCEPTION(grb.optimize());
 
+        HANDLE_GRB_EXCEPTION(grb.get(GRB_DoubleAttr_Runtime));
+        HANDLE_GRB_EXCEPTION(grb.get(GRB_DoubleAttr_ObjVal));
         LOG_F(INFO,
               "Solved in %lf with value %lf",
-              model.get(GRB_DoubleAttr_Runtime),
-              model.get(GRB_DoubleAttr_ObjVal));
+              grb.get(GRB_DoubleAttr_Runtime),
+              grb.get(GRB_DoubleAttr_ObjVal));
 
         // get the weights of the nodes from the dual variables
         for_nodes(g, v) {
-            g.set_weight(v, constrs[v].get(GRB_DoubleAttr_Pi));
+            form.set_weight(v, constrs[v].get(GRB_DoubleAttr_Pi));
         }
 
         vector<node_set> const sets = pricing::solve(g);
@@ -111,25 +88,22 @@ cost Solver::solve(Graph& g,
             break;
         }
 
-        DCHECK_F(check_indep_sets(g, sets), "Invalid new sets.");
-
         for (const node_set& set : sets) {
-            add_variable(model, vars, constrs, indep_sets, set);
+            add_variable(set);
         }
     }
 
-    LOG_F(INFO, "Final model with %d sets.", (int)indep_sets.size());
+    LOG_F(INFO, "Final model with %d sets.", (int)vars.size());
 
-    for (const node_set& set : indep_sets) {
-        x_s[set] = vars[set].get(GRB_DoubleAttr_X);
+    color_sol sol;
+    for_indep_set(form, set) {
+        sol.x_sets[set] = vars[set].get(GRB_DoubleAttr_X);
     }
-
-    // Return the dual objective solution
-    cost sum = 0;
+    sol.cost = 0;
     for_nodes(g, u) {
-        sum += EPS * floor(g.get_weight(u) / EPS);
+        sol.cost += EPS * floor(g.get_weight(u) / EPS);
     }
     // TODO no caso de variáveis de corte, isso deve ser ceil
     // conferir o paper do Lotti
-    return sum;
+    return sol;
 }

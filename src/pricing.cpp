@@ -13,7 +13,7 @@ struct mwis_sol
 
 struct branch_node
 {
-    Graph g;
+    graph g;
     mwis_sol sol;
 };
 
@@ -22,12 +22,12 @@ struct branch_node
 */
 mwis_sol mwis_heu(const branch_node& n)
 {
-    Graph g = Graph(n.g);
+    graph g = graph(n.g);
     mwis_sol sol = n.sol;
 
     while (not g.is_empty()) {
         cost max_weight = 0;
-        Graph::node max_node = 0;
+        graph::node max_node = 0;
         for_nodes(g, u) {
             if (n.g.get_weight(u) > max_weight) {
                 max_weight = n.g.get_weight(u);
@@ -38,7 +38,7 @@ mwis_sol mwis_heu(const branch_node& n)
         sol.value += max_weight;
         sol.nodes.insert(max_node);
         node_set const onu = g.get_closed_neighborhood(max_node);
-        for (Graph::node const u : onu) {
+        for (graph::node const u : onu) {
             g.deactivate(u);
         }
     }
@@ -50,7 +50,7 @@ mwis_sol mwis_heu(const branch_node& n)
 ** Function that computes the confining set of a node v.
 ** Returns an empty set if the node is unconfined.
 */
-node_set confine(const Graph& g, Graph::node v)
+node_set confine(const graph& g, graph::node v)
 {
     // TODO Refazer isso com o novo algoritmo de Xiao2023
     node_set s = {v};
@@ -104,7 +104,7 @@ node_set confine(const Graph& g, Graph::node v)
         }
     }
 
-    DCHECK_F(check_indep_set(g, s), "Confining set is not independent.");
+    // DCHECK_F(check_indep_set(g, s), "Confining set is not independent.");
 
     return s;
 }
@@ -126,13 +126,13 @@ node_set confine(const Graph& g, Graph::node v)
 cost mwis_ub(const branch_node n)
 {
     // sort the vertices in descending order of their weight
-    vector<Graph::node> sorted_nodes = {};
+    vector<graph::node> sorted_nodes = {};
     for_nodes(n.g, u) {
         sorted_nodes.push_back(u);
     }
     std::sort(sorted_nodes.begin(),
               sorted_nodes.end(),
-              [&n](Graph::node a, Graph::node b)
+              [&n](graph::node a, graph::node b)
               {
                   if (n.g.get_weight(a) == n.g.get_weight(b)) {
                       return n.g.get_degree(a) > n.g.get_degree(b);
@@ -144,7 +144,7 @@ cost mwis_ub(const branch_node n)
     // maximum weight which it can be added to.
     vector<pair<node_set, cost>> cliques = {};
     cost wcc = 0;
-    for (Graph::node const u : sorted_nodes) {
+    for (graph::node const u : sorted_nodes) {
         pair<node_set, cost>* max_clique = nullptr;
         node_set const onu = n.g.get_open_neighborhood(u);
         for (pair<node_set, cost>& clique : cliques) {
@@ -184,7 +184,7 @@ void xiao2021_rule1(branch_node& n)
         n.sol.value += n.g.get_weight(v);
         n.sol.nodes.insert(v);
         node_set const onu = n.g.get_closed_neighborhood(v);
-        for (Graph::node const u : onu) {
+        for (graph::node const u : onu) {
             n.g.deactivate(u);
         }
     }
@@ -231,7 +231,7 @@ void branch(stack<branch_node>& tree, branch_node& b_node)
 {
     // find the vertex with max degree in G, if it is not confined, remove it.
     node_set confining_set;
-    Graph::node v = 0;
+    graph::node v = 0;
     while (true) {
         v = b_node.g.get_node_max_degree();
         confining_set = confine(b_node.g, v);
@@ -242,13 +242,13 @@ void branch(stack<branch_node>& tree, branch_node& b_node)
     }
 
     // Branching 1 : add the confining
-    Graph g1 = Graph(b_node.g);
-    for (Graph::node const u : g1.get_closed_neighborhood(confining_set)) {
+    graph g1 = graph(b_node.g);
+    for (graph::node const u : g1.get_closed_neighborhood(confining_set)) {
         g1.deactivate(u);
     }
 
     mwis_sol sol1 = {b_node.sol.value, b_node.sol.nodes};
-    for (Graph::node const u : confining_set) {
+    for (graph::node const u : confining_set) {
         sol1.value += b_node.g.get_weight(u);
         sol1.nodes.insert(u);
     }
@@ -258,7 +258,7 @@ void branch(stack<branch_node>& tree, branch_node& b_node)
     }
 
     // Branching 2 : delete v
-    Graph g2 = Graph(b_node.g);
+    graph g2 = graph(b_node.g);
     g2.deactivate(v);
     if (not g2.is_empty()) {
         tree.push({g2, b_node.sol});
@@ -276,11 +276,11 @@ void branch(stack<branch_node>& tree, branch_node& b_node)
 ** add node (G - N[Sv], sol + v) to the branch-and-bound tree
 ** add node (G - v, sol) to the branch-and-bound tree
 */
-vector<node_set> pricing::solve(const Graph& orig)
+vector<node_set> pricing::solve(const graph& orig)
 {
     LOG_SCOPE_F(INFO, "Pricing.");
-    Graph g = Graph(orig);
-    vector<node_set> new_indep_sets = {};
+    graph g = graph(orig);
+    vector<node_set> ret = {};
 
     // Remove all nodes with weight 0
     for_nodes(g, n) {
@@ -289,8 +289,8 @@ vector<node_set> pricing::solve(const Graph& orig)
         }
     }
 
-    log_graph_stats(g, "Original");
-    log_graph_stats(g, "Reduced");
+    g.log_stats("Original");
+    g.log_stats("Reduced ");
 
     stack<branch_node> tree;
     tree.push({g, {0, {}}});
@@ -313,13 +313,10 @@ vector<node_set> pricing::solve(const Graph& orig)
         // BUG Caso infinito, conferir se EPS é maior que o EPS dado ao Gurobi.
         if (heu_sol.value > 1 + EPS) {
             // check if is not aldready in new_indep_set
-            if (find(
-                    new_indep_sets.begin(), new_indep_sets.end(), heu_sol.nodes)
-                != new_indep_sets.end())
-            {
+            if (find(ret.begin(), ret.end(), heu_sol.nodes) != ret.end()) {
                 continue;
             }
-            new_indep_sets.push_back(heu_sol.nodes);
+            ret.push_back(heu_sol.nodes);
         }
 
         if (heu_sol.value > best.value) {
@@ -334,14 +331,8 @@ vector<node_set> pricing::solve(const Graph& orig)
 
         branch(tree, b_node);
     }
-    LOG_F(INFO, "MWIS solved with value %Lf | %d branchs.", best.value, count);
+    LOG_F(INFO, "MWIS solved with value %f | %d branchs.", best.value, count);
+    LOG_F(INFO, "Generated %d new sets.", (int)ret.size());
 
-    LOG_SCOPE_F(INFO, "Maximal set.");
-    for (node_set& s : new_indep_sets) {
-        maximal_set(g, s);
-    }
-
-    LOG_F(INFO, "Found %lu independent sets violated.", new_indep_sets.size());
-
-    return new_indep_sets;
+    return ret;
 }

@@ -8,25 +8,41 @@
 #include <utility>
 #include <vector>
 
-#define MAX_NODES 10000
-#define for_nodes(G, u) \
-    for (node u = G.first_act_node(); u < G.get_n(); u = G.next_act_node(u))
-#define for_edges(G, e) \
-    for (edge e = G.first_edge(); \
-         e.first < G.get_n() and e.second < G.get_n(); \
-         e = G.next_edge(e))
-#define for_adj(G, u, n) \
-    for (node n = G.first_adj_node(u); n < G.get_n(); n = G.next_adj_node(u, n))
+using std::bitset;
+using std::pair;
+using std::set;
+using std::string;
+using std::vector;
 
-using namespace std;
+enum
+{
+    max_nodes = 10000
+};
+#define for_nodes(G, u) \
+    for (node u = (G).first_act_node(); (u) < (G).get_n(); \
+         (u) = (G).next_act_node(u))
+#define for_edges(G, e) \
+    for (edge e = (G).first_edge(); \
+         (e).first < (G).get_n() and (e).second < (G).get_n(); \
+         (e) = (G).next_edge(e))
+#define for_adj(G, u, n) \
+    for (node n = (G).first_adj_node(u); (n) < (G).get_n(); \
+         (n) = (G).next_adj_node(u, n))
+#define for_pair_nodes(G, u, v) \
+    for (node u = (G).first_act_node(); (u) < (G).get_n(); \
+         (u) = (G).next_act_node(u)) \
+        for (node v = (G).next_act_node(u); (v) < (G).get_n(); \
+             (v) = (G).next_act_node(v))
 
 enum class mod_type
 {
+    // none -> contract -> conflict
+    none,  // nothing has been done
+    contract,  // all edges of v are added to u and v is deactivated
     conflict,  // add an edge between u and v
-    contract  // all edges of v are added to u and v is deactivated
 };
 
-class Graph
+class graph
 {
   public:
     using node = short unsigned int;
@@ -40,11 +56,13 @@ class Graph
     };
 
     // === Constructors ======================================
-    explicit Graph(int);
-    Graph(const Graph&);
+    explicit graph(int);
+    explicit graph(const string&);
+    graph(const graph& g);
+    ~graph() = default;
 
     // === Getters ===========================================
-    node get_n() const;  // number of active nodes
+    node get_n() const;
     node get_active_n() const;
     bool is_empty() const;
     unsigned long int get_m() const;
@@ -52,12 +70,9 @@ class Graph
     node get_degree(node) const;
     node get_node_max_degree() const;
     node get_node_min_degree() const;
+    inline unsigned int get_n_mods() const { return delta.size(); }
     inline bool is_active(node u) const { return active[u]; }
 
-    /*
-     * @brief Get the number of edges beteween two nodes. If either are
-     * inactive or equal, their adjacency is 0.
-     */
     node get_adjacency(node, node) const;
 
     // === Used for iterators ================================
@@ -81,13 +96,13 @@ class Graph
     void change(mod_type, node, node);
     void undo(mod_type, node, node);
 
-    unsigned long int add_edge(node, node);
-    unsigned long int remove_edge(node, node);
-
     void k_core(int);
 
+    // === Logs and checks ==================================
+
     void log() const;
-    void apply_changes_to_sol(vector<set<Graph::node>>&) const;
+    void log_stats(const string&) const;
+    void apply_changes_to_sol(vector<set<graph::node>>&) const;
 
     bool is_connected() const;
     bool is_connected_complement() const;
@@ -99,15 +114,17 @@ class Graph
 
   private:
     node n;
-    unsigned long int m;
+    unsigned long m;
     vector<mod> delta;
     vector<node> deg;
-    bitset<MAX_NODES> active;
+    bitset<max_nodes> active;
     // BUG For some instances, this can be not enough
     vector<vector<node>> adj;
-    vector<bitset<MAX_NODES>> adj_bool;
+    vector<bitset<max_nodes>> adj_bool;
     vector<double> weights;
 
+    unsigned long int add_edge(node, node);
+    unsigned long int remove_edge(node, node);
     void do_conflict(node, node);
     void undo_conflict(node, node);
     void do_contract(node, node);
@@ -117,7 +134,7 @@ class Graph
     void complement();
 };
 
-using node_set = Graph::node_set;
-using node = Graph::node;
-using edge = Graph::edge;
+using node_set = graph::node_set;
+using node = graph::node;
+using edge = graph::edge;
 #endif

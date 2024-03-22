@@ -14,6 +14,7 @@ Checks: "*,\
   -misc-non-private-member-variables-in-classes,\
   -cppcoreguidelines-pro-type-vararg,\
   -modernize-use-trailing-return-type,\
+  -readability-identifier-naming,\
   -readability-identifier-length,\
   -google-runtime-int,\
   -concurrency-mt-unsafe,\
