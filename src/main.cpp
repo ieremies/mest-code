@@ -13,19 +13,6 @@
 #include "../incl/solver.hpp"
 #include "../incl/utils.hpp"
 
-// Start counting time limit
-const chrono::seconds time_limit(TIMELIMIT);
-const auto start_time = chrono::steady_clock::now();
-
-// TODO time_limit não é obedecido fora da main
-bool check_time()
-{
-    const auto current_time = chrono::steady_clock::now();
-    const auto elapsed_time =
-        chrono::duration_cast<chrono::seconds>(current_time - start_time);
-    return elapsed_time > time_limit;
-}
-
 Graph* read_dimacs_instance(const string& filename)
 {
     ifstream infile(filename);
@@ -94,36 +81,32 @@ void maximal_set(const Graph& g, node_set& s)
     }
 }
 
+/*
+** The idea is to create some usefull independent sets.
+** - maximal independent set starting with each vertex
+** - maximal independent set starting with a pair of non-adj vertexes.
+** - remove one element from a independnet set
+**    not sure what
+*/
 void enrich(const Graph& g, vector<node_set>& indep_sets)
 {
+    for (node_set set : indep_sets) {
+        maximal_set(g, set);
+    }
     for_nodes(g, u) {
-        // testei a ideia de criar os conjuntos maximais a partir
-        // de pares não conectados, mas não parece ser muito bom não...
         node_set s = {u};
         maximal_set(g, s);
         indep_sets.push_back(s);
     }
-    // vector<node_set> new_indep_sets;
-    // for (auto& s : indep_sets) {
-    //     if (s.size() == 1) {
-    //         continue;
-    //     }
-    //     for (auto& v : s) {
-    //         node_set s_copy = s;
-    //         // remove v from s_copy
-    //         s_copy.erase(v);
-    //         new_indep_sets.push_back(s_copy);
-    //     }
-    // }
-    // indep_sets.insert(
-    //     indep_sets.end(), new_indep_sets.begin(), new_indep_sets.end());
 }
+
 int main(int argc, char** argv)
 {
     // Logging config
     loguru::g_preamble_date = false;
     loguru::g_preamble_thread = false;
     loguru::g_preamble_time = false;
+    loguru::g_stderr_verbosity = 0;
     loguru::init(argc, argv);
     loguru::add_file("log.log", loguru::FileMode::Truncate, LOGURU_VERBOSE);
 
@@ -153,9 +136,8 @@ int main(int argc, char** argv)
 
         indep_sets = tree.next(*g, upper_bound);
 
-    } while (!indep_sets.empty() and !check_time());
+    } while (!indep_sets.empty());
 
-    LOG_IF_F(WARNING, check_time(), "Timed out!");
     LOG_F(WARNING, "Upper bound: %Lf", upper_bound);
 
     delete g;
